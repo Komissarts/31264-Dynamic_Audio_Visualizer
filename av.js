@@ -23,6 +23,7 @@ var vizInit = function (){
   
 	function play() {
 
+		document.addEventListener('mousemove', handleMouseMove, false);
 		var context = new AudioContext();
 		var src = context.createMediaElementSource(audio);
 		var analyser = context.createAnalyser();
@@ -36,22 +37,51 @@ var vizInit = function (){
 		
 		createScene();
 
+		var player;
+		var cylinder;
 
-		//Cylinder = function(){
-		//	
-		//}
-		var cylinderGeometry = new THREE.CylinderGeometry(600,600,800,40,10);
-		cylinderGeometry.applyMatrix(new THREE.Matrix4().makeRotationX(-Math.PI/2));
-		cylinderGeometry.mergeVertices();
 
-		var cylinderMaterial = new THREE.MeshLambertMaterial({
-			color: 0xff00ee,
-			wireframe: true
-		});
-		var cylinder = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
-		cylinder.position.set(0,0,0);
-		group.add(cylinder);
+			//Add Cylinder
+			{
+				var cylinderGeometry = new THREE.CylinderGeometry(600,600,800,40,10);
+				cylinderGeometry.applyMatrix(new THREE.Matrix4().makeRotationX(-Math.PI/2));
+				cylinderGeometry.mergeVertices();	
 
+				var cylinderMaterial = new THREE.MeshLambertMaterial({
+					color: 0xff00ee,
+					wireframe: true
+				});		
+
+				var cylinder = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
+				cylinder.position.y = -600;
+				scene.add(cylinder);
+			}
+
+//			Cylinder = function(){
+//				var cylinderGeometry = new THREE.CylinderGeometry(600,600,800,40,10);
+//				cylinderGeometry.applyMatrix(new THREE.Matrix4().makeRotationX(-Math.PI/2));
+//				cylinderGeometry.mergeVertices();
+//				var cylinderMaterial = new THREE.MeshLambertMaterial({
+//					color: 0xff00ee,
+//					wireframe: true
+//				});
+//				this.mesh = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
+//			}
+
+			var Player = function(){
+				this.mesh = new THREE.Object3D();
+				this.mesh.name = "player";
+
+				//default mesh
+				var cubeGeometry = new THREE.BoxGeometry(20,20,20,1,1,1);
+				var cubeMat = new THREE.MeshPhongMaterial({color:0x68228b, shading:THREE.FlatShading});
+				var cube = new THREE.Mesh(cubeGeometry, cubeMat);
+				this.mesh.add(cube);
+			}
+
+			//Add Player Cube
+			createPlayer();
+//			createCylinder();
 
 		//Add Objects
 		{
@@ -65,12 +95,12 @@ var vizInit = function (){
 			var plane = new THREE.Mesh(planeGeometry, planeMaterial);
 			plane.rotation.x = -0.5 * Math.PI;
 			plane.position.set(0, 30, 0);
-			group.add(plane);
+			//group.add(plane);
 
 			var plane2 = new THREE.Mesh(planeGeometry, planeMaterial);
 			plane2.rotation.x = -0.5 * Math.PI;
 			plane2.position.set(0, -30, 0);
-			group.add(plane2);
+			//group.add(plane2);
 		
 			var icosahedronGeometry = new THREE.IcosahedronGeometry(10, 4);
 			var lambertMaterial = new THREE.MeshLambertMaterial({
@@ -120,14 +150,16 @@ var vizInit = function (){
 				var upperAvgFr = upperAvg / upperHalfArray.length;
 			}
 
+			//updatePlayer();
+			//updateCameraFov();
 
 			makeRoughGround(plane, modulate(upperAvgFr, 0, 1, 0.5, 4));
 			makeRoughGround(plane2, modulate(lowerMaxFr, 0, 1, 0.5, 4));
-			makeRoughCylinder(cylinder, modulate(lowerMaxFr, 0, 1, 0.5, 4));
+			//makeRoughCylinder(cylinder, modulate(lowerMaxFr, 0, 1, 0.5, 4));
 			
 			makeRoughBall(ball, modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8), modulate(upperAvgFr, 0, 1, 0, 4));
 
-			//cylinder.rotation.y += 0.005;
+			cylinder.rotation.z += 0.005;
 			group.rotation.y += 0.005;
 			
 			renderer.render(scene, camera);
@@ -200,6 +232,44 @@ var vizInit = function (){
 			scene.add(spotLight);
 		}
 
+		function createPlayer(){
+			player = new Player();
+
+			player.mesh.position.y = 100;
+			scene.add(player.mesh);
+		}
+
+		function createCylinder(){
+			cylinder = new Cylinder();
+			cylinder.mesh.position.y = -600;
+			scene.add(cylinder.mesh);
+		}
+
+		function updatePlayer(){
+			var targetY = normalize(mousePos.y,-.75,.75,25, 175);
+			var targetX = normalize(mousePos.x,-.75,.75,-100, 100);
+			player.mesh.position.y += (targetY-player.mesh.position.y)*0.1;
+			player.mesh.rotation.z = (targetY-player.mesh.position.y)*0.0128;
+			player.mesh.rotation.x = (player.mesh.position.y-targetY)*0.0064;
+		}
+
+
+
+
+		function updateCameraFov(){
+			camera.fov = normalize(mousePos.x,-1,1,40, 80);
+			camera.updateProjectionMatrix();
+		}
+
+		function normalize(v,vmin,vmax,tmin, tmax){
+			var nv = Math.max(Math.min(v,vmax), vmin);
+			var dv = vmax-vmin;
+			var pc = (nv-vmin)/dv;
+			var dt = tmax-tmin;
+			var tv = tmin + (pc*dt);
+			return tv;
+		}
+
 		function makeRoughBall(mesh, bassFr, treFr) {
 			mesh.geometry.vertices.forEach(function (vertex, i) {
 				var offset = mesh.geometry.parameters.radius;
@@ -246,6 +316,12 @@ var vizInit = function (){
 	};
 }
 
+var mousePos = { x: 0, y: 0 };
+function handleMouseMove(event) {
+	var tx = -1 + (event.clientX / WIDTH)*2;
+	var ty = 1 - (event.clientY / HEIGHT)*2;
+	mousePos = {x:tx, y:ty};
+}
 window.onload = vizInit();
 
 document.body.addEventListener('touchend', function(ev) { context.resume(); });
