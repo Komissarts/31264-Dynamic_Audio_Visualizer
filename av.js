@@ -1,10 +1,10 @@
 var noise = new SimplexNoise();
 var vizInit = function (){
-  
+	
 	var file = document.getElementById("thefile");
 	var audio = document.getElementById("audio");
 	var fileLabel = document.querySelector("label.file");
-	
+
 	document.onload = function(e){
 		console.log(e);
 		audio.play();
@@ -20,10 +20,10 @@ var vizInit = function (){
 		audio.play();
 		play();
 	}
-  
-	function play() {
 
+	function play() {
 		document.addEventListener('mousemove', handleMouseMove, false);
+		
 		var context = new AudioContext();
 		var src = context.createMediaElementSource(audio);
 		var analyser = context.createAnalyser();
@@ -57,6 +57,7 @@ var vizInit = function (){
 				scene.add(cylinder);
 			}
 
+			{
 //			Cylinder = function(){
 //				var cylinderGeometry = new THREE.CylinderGeometry(600,600,800,40,10);
 //				cylinderGeometry.applyMatrix(new THREE.Matrix4().makeRotationX(-Math.PI/2));
@@ -67,6 +68,7 @@ var vizInit = function (){
 //				});
 //				this.mesh = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
 //			}
+			}
 
 			var Player = function(){
 				this.mesh = new THREE.Object3D();
@@ -79,9 +81,7 @@ var vizInit = function (){
 				this.mesh.add(cube);
 			}
 
-			//Add Player Cube
 			createPlayer();
-//			createCylinder();
 
 		//Add Objects
 		{
@@ -129,6 +129,10 @@ var vizInit = function (){
 		
 		loop();
 
+		function init(event){
+			
+		}
+
 
 		function loop() {
 			//Parse Audio Input into usable Data
@@ -150,7 +154,7 @@ var vizInit = function (){
 				var upperAvgFr = upperAvg / upperHalfArray.length;
 			}
 
-			//updatePlayer();
+			updatePlayer();
 			//updateCameraFov();
 
 			makeRoughGround(plane, modulate(upperAvgFr, 0, 1, 0.5, 4));
@@ -345,3 +349,4 @@ function avg(arr){
 function max(arr){
     return arr.reduce(function(a, b){ return Math.max(a, b); })
 }
+window.addEventListener('load', init, false);
