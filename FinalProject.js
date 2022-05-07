@@ -85,9 +85,11 @@ var noise = new SimplexNoise();
 				}
 			}
 
+			
+
 			//Add Plane Geometry (Outside border Planes use same concept as lab week3 mobius strip)
 			{
-				var planeGeometry = new THREE.PlaneGeometry(145, 600, 6, 50);
+				var planeGeometry = new THREE.PlaneGeometry(65, 600, 6, 50);
 				var planeMaterial = new THREE.MeshLambertMaterial({
 					color: 0x68228b, //Adjustable Values
 					//new THREE.Color("rgb(100, 0, 0)"),
@@ -96,8 +98,8 @@ var noise = new SimplexNoise();
 					wireframe: true
 				});
 				//Established Plane Array, fundamentally similar to Workshop Lectures
-				var planeArr = [5];
-				var n=5
+				var planeArr = [10];
+				var n=10
 				function getPlanes(num){
 					for(i = 0; i<n; i++){
 						var rot = new THREE.Matrix4();
@@ -124,6 +126,13 @@ var noise = new SimplexNoise();
 				group.add(planeArr[2]);
 				group.add(planeArr[3]);
 				group.add(planeArr[4]);
+				group.add(planeArr[5]);
+				group.add(planeArr[6]);
+				group.add(planeArr[7]);
+				group.add(planeArr[8]);
+				group.add(planeArr[9]);
+
+				group.position.y = -400;
 				scene.add(group);
 			}
 
