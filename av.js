@@ -21,23 +21,30 @@ var vizInit = function (event){
 		play();
 	}
 
-	var context = new AudioContext();
-	var src = context.createMediaElementSource(audio);
-	var analyser = context.createAnalyser();
-	src.connect(analyser);
-	analyser.connect(context.destination);
-	analyser.fftSize = 512;
-	var bufferLength = analyser.frequencyBinCount;
-	var dataArray = new Uint8Array(bufferLength);
 
-	var scene, camera, fieldOfView, aspectRatio, nearPlane, farPlane, renderer, container, group, HEIGHT, WIDTH;
 
 	
 	function play() {
 		document.addEventListener('mousemove', handleMouseMove, false);
 		
-
-		
+		//AudioContext() is a linked list of Audio nodes that contains audio data
+		var context = new AudioContext();
+		//creates an AudioSource node that can be used to manipulate audio data
+		var src = context.createMediaElementSource(audio);
+		//creates an Analyser node that allows us to read audio data
+		var analyser = context.createAnalyser();
+		//allows rw access to the audio files
+		src.connect(analyser);
+		analyser.connect(context.destination);
+		//sample size used when performing Fourier Transform to get frequency Data
+		analyser.fftSize = 2048;
+		//readonly integer, only half of analyser.fftSize. it is the amoount of data
+		//values availble for any music visualizations
+		var bufferLength = analyser.frequencyBinCount;
+		//standard 8-bit integers, holds the values of bufferLength for future use
+		var dataArray = new Uint8Array(bufferLength);
+	
+		var scene, camera, fieldOfView, aspectRatio, nearPlane, farPlane, renderer, container, group, HEIGHT, WIDTH;
 		createScene();
 
 		var player;

@@ -1,4 +1,9 @@
+//IMPORT SPACESHIP MODEL FOR CRAFT
+//CLEAN UP CODE LMAO
+
 var noise = new SimplexNoise();
+
+	
 
 	var file = document.getElementById("thefile");
 	var audio = document.getElementById("audio");
@@ -20,9 +25,10 @@ var noise = new SimplexNoise();
 		audio.play();
 		play();
 	}
+	
   
 	function play() {
-		
+		document.addEventListener('mousemove', handleMouseMove, false);
 		//Initializing Variables
 		{
 			//AudioContext() is a linked list of Audio nodes that contains audio data
@@ -42,7 +48,7 @@ var noise = new SimplexNoise();
 			//standard 8-bit integers, holds the values of bufferLength for future use
 			var dataArray = new Uint8Array(bufferLength);
 			//group to be able to edit/interact with all the side panels simultaneuosly
-			var group = new THREE.Group();
+			//var group = new THREE.Group();
 		}
 
 
@@ -50,31 +56,37 @@ var noise = new SimplexNoise();
 		{
 			//Add Camera, Scene & Renderer
 			{
-				var HEIGHT, WIDTH;
-				HEIGHT = window.innerHeight;
-				WIDTH = window.innerWidth;
+				var scene, camera, fieldOfView, aspectRatio, nearPlane, farPlane, renderer, container, group, HEIGHT, WIDTH;
+				createScene();
 
-				var scene = new THREE.Scene();
-				aspectRatio = WIDTH / HEIGHT;
-				var fieldOfView = 60;
-				var nearPlane = 1;
-				var farPlane = 10000;
-
-				var   camera = new THREE.PerspectiveCamera(
-					fieldOfView,
-					aspectRatio,
-					nearPlane,
-					farPlane
-				);
-				scene.fog = new THREE.Fog("rgb(255, 0, 0)", 100,950);
-				camera.position.set(0,200,100);
-				camera.lookAt(scene.position);
-				scene.add(camera);
-
-				var renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-				renderer.setSize(WIDTH, HEIGHT);
-
-				window.addEventListener('resize', onWindowResize, false);
+				function createScene(){
+					HEIGHT = window.innerHeight;
+					WIDTH = window.innerWidth;
+					scene = new THREE.Scene();
+		
+					aspectRatio = WIDTH / HEIGHT;
+					fieldOfView = 60;
+					nearPlane = 1;
+					farPlane = 10000;
+					camera = new THREE.PerspectiveCamera(
+						fieldOfView,
+						aspectRatio,
+						nearPlane,
+						farPlane
+					);
+					group = new THREE.Group();
+		
+					scene.fog = new THREE.Fog("rgb(100, 0, 0)", 100,950);
+					camera.position.x = 0;
+					camera.position.z = 200;
+					camera.position.y = 100;
+		
+					renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+					renderer.setSize(WIDTH, HEIGHT);
+					renderer.shadowMap.enabled = true;
+					container = document.getElementById('out').appendChild(renderer.domElement);
+					window.addEventListener('resize', onWindowResize, false);
+				}
 
 				function onWindowResize() {
 					HEIGHT = window.innerHeight;
@@ -85,11 +97,9 @@ var noise = new SimplexNoise();
 				}
 			}
 
-			
-
 			//Add Plane Geometry (Outside border Planes use same concept as lab week3 mobius strip)
 			{
-				var planeGeometry = new THREE.PlaneGeometry(65, 600, 6, 50);
+				var planeGeometry = new THREE.PlaneGeometry(210, 1200, 20, 50);
 				var planeMaterial = new THREE.MeshLambertMaterial({
 					color: 0x68228b, //Adjustable Values
 					//new THREE.Color("rgb(100, 0, 0)"),
@@ -98,8 +108,8 @@ var noise = new SimplexNoise();
 					wireframe: true
 				});
 				//Established Plane Array, fundamentally similar to Workshop Lectures
-				var planeArr = [10];
-				var n=10
+				var planeArr = [20];
+				var n=20
 				function getPlanes(num){
 					for(i = 0; i<n; i++){
 						var rot = new THREE.Matrix4();
@@ -109,7 +119,7 @@ var noise = new SimplexNoise();
 
 						rot2.makeRotationX(-0.5 * Math.PI);
 						rot.makeRotationZ(i*(2*Math.PI/n));
-						tra.makeTranslation(0,100,0);
+						tra.makeTranslation(0,650,0);
 
 						combined.multiply(rot);
 						combined.multiply(tra);
@@ -122,40 +132,12 @@ var noise = new SimplexNoise();
 					return planeArr[num];
 				};
 				group.add(getPlanes(0));
-				group.add(planeArr[1]);
-				group.add(planeArr[2]);
-				group.add(planeArr[3]);
-				group.add(planeArr[4]);
-				group.add(planeArr[5]);
-				group.add(planeArr[6]);
-				group.add(planeArr[7]);
-				group.add(planeArr[8]);
-				group.add(planeArr[9]);
-
-				group.position.y = -400;
-				scene.add(group);
-			}
-
-			//Add Cylinder Geometry
-			{
-				//AddCylinder();
-				function AddCylinder(){
-				var cylinderGeom = new THREE.CylinderGeometry(600,600,800,40,10);
-					cylinderGeom.applyMatrix(new THREE.Matrix4().makeRotationX(-Math.PI/2));
-					geom.mergeVertices();
-				var cylinderMat = new THREE.MeshPhongMaterial({
-					color:Colors.blue,
-					transparent:true,
-					opacity:.8,
-					shading:THREE.FlatShading,
-					});
-				
-				var cylinder = new THREE.Mesh(cylinderGeom, cylinderMat);
-					cylinder.receiveShadow = true;
-
-				cylinder.position.y = -600;
-				scene.add(cylinder);
+				for(i = 1; i<n; i++){
+					group.add(planeArr[i]);
 				}
+
+				group.position.y = -600;
+				scene.add(group);
 			}
 
 			//Add Sphere Geometry (icosahedron with adjustable detail, wireframe on)
@@ -168,7 +150,8 @@ var noise = new SimplexNoise();
 					wireframe: true
 				});
 				var ball = new THREE.Mesh(icosahedronGeometry, ballMaterial);
-				ball.position.set(0, 0, 0);
+				//ball.position.set(0, 0, 0);
+				ball.position.y = 100;
 				scene.add(ball);
 			}
 
@@ -219,7 +202,30 @@ var noise = new SimplexNoise();
 				scene.add(spotLight);
 			}
 		}
+		function updateCameraFov(){
+			camera.fov = normalize(mousePos.x,-1,1,40, 80);
+			camera.updateProjectionMatrix();
+		}
+			
+		function normalize(v,vmin,vmax,tmin, tmax){
+			var nv = Math.max(Math.min(v,vmax), vmin);
+			var dv = vmax-vmin;
+			var pc = (nv-vmin)/dv;
+			var dt = tmax-tmin;
+			var tv = tmin + (pc*dt);
+			return tv;
+		}
 		
+		// HANDLE MOUSE EVENTS
+
+		var mousePos = { x: 0, y: 0 };
+		
+		function handleMouseMove(event) {
+		  var tx = -1 + (event.clientX / WIDTH)*2;
+		  var ty = 1 - (event.clientY / HEIGHT)*2;
+		  mousePos = {x:tx, y:ty};
+		}
+
 		document.getElementById('out').appendChild(renderer.domElement);
 		window.addEventListener('resize', onWindowResize, false);
 
@@ -231,6 +237,7 @@ var noise = new SimplexNoise();
 
 	function render() {
 
+		updateCameraFov();
 		//Seperates Frequency Data into lowest - highest + averages
 		{
 			analyser.getByteFrequencyData(dataArray);
@@ -268,6 +275,8 @@ var noise = new SimplexNoise();
 		audio.play();
 	};
 
+
+
 	
 	document.body.addEventListener('touchend', function(ev) { context.resume(); });
 
@@ -302,7 +311,7 @@ var noise = new SimplexNoise();
 		//same as distortBall, except it uses 2D noise instead of 3D, moves in Z direction instead of multiplyScalar
 		function distortPlane(mesh, distortionFr) {
 			mesh.geometry.vertices.forEach(function (vertex, i) {
-				var amp = 10;
+				var amp = 20;
 				var time = Date.now();
 				var distance = (noise.noise2D(vertex.x + time * 0.0003, vertex.y + time * 0.0001) + 0) * distortionFr * amp;
 				vertex.z = distance;
