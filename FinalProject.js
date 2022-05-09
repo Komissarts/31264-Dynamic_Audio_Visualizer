@@ -56,7 +56,7 @@ var noise = new SimplexNoise();
 		{
 			//Add Camera, Scene & Renderer
 			{
-				var scene, camera, fieldOfView, aspectRatio, nearPlane, farPlane, renderer, container, group, HEIGHT, WIDTH;
+				var scene, camera, fieldOfView, aspectRatio, nearPlane, farPlane, renderer, container, group, group2, HEIGHT, WIDTH;
 				createScene();
 
 				function createScene(){
@@ -75,10 +75,11 @@ var noise = new SimplexNoise();
 						farPlane
 					);
 					group = new THREE.Group();
+					group2 = new THREE.Group();
 		
 					scene.fog = new THREE.Fog("rgb(100, 0, 0)", 100,950);
 					camera.position.x = 0;
-					camera.position.z = 200;
+					camera.position.z = 150;
 					camera.position.y = 100;
 		
 					renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
@@ -157,8 +158,84 @@ var noise = new SimplexNoise();
 
 			//Add models
 			{
-				
+				//var player;
+				//var PlayerMesh = function(){
+//					var player_loader = new THREE.PLYLoader();
+//					var player_mesh = null;
+//					var ScaleFactIn = 5.0;
+//					player_loader.load('models/small_fighter.ply', function(geometry){
+//						geometry.computeVertexNormals();
+//						geometry.computeBoundingBox();
+//
+//						var material = new THREE.MeshLambertMaterial({
+//							color: new THREE.Color("rgb(255, 0, 0)"),
+//							//new THREE.Color("rgb(0, 0, 100)"),
+//							//0xff00ee,
+//							//wireframe: true
+//						});
+//
+//						var center = new THREE.Vector3();
+//						var size = new THREE.Vector3();
+//						geometry.boundingBox.getCenter(center);
+//						geometry.boundingBox.getSize(size);
+//						var min = geometry.boundingBox.min;
+//			 
+//						var sca = new THREE.Matrix4();
+//						var tra = new THREE.Matrix4();
+//			 
+//						var ScaleFact=ScaleFactIn/size.length();
+//						sca.makeScale(ScaleFact,ScaleFact,ScaleFact);
+//						tra.makeTranslation (-center.x,-center.y,-min.z);
+//
+//						player_mesh = new THREE.Mesh(geometry, material);
+//						player_mesh.applyMatrix(tra);
+//						player_mesh.applyMatrix(sca);
+//						//mesh.name = "player";
+//						scene.add(player_mesh);
+//					});
+				//}
+				//PlayerMesh();
+
+
+
+
+				/*
+				//MESH LOADING
+				var loader = new THREE.PLYLoader();
+				var player = null;
+				loader.load('models/small_fighter.ply', function ( geometry )
+				{
+					geometry.computeVertexNormals();
+					geometry.computeBoundingBox();
+					
+					var center = new THREE.Vector3();
+					var size = new THREE.Vector3();
+					geometry.boundingBox.getCenter(center);
+					geometry.boundingBox.getSize(size);
+					var min = geometry.boundingBox.min;
+		
+					var sca = new THREE.Matrix4();
+					var tra = new THREE.Matrix4();
+		
+					var ScaleFact=5/size.length();
+					sca.makeScale(ScaleFact,ScaleFact,ScaleFact);
+					tra.makeTranslation (-center.x,-center.y,-min.z);
+		
+					var material = new THREE.MeshPhongMaterial();
+					material.color= new THREE.Color(0.9,0.9,0.9);
+					material.shininess=100;
+					player = new THREE.Mesh( geometry, material );
+		
+					player.applyMatrix(tra);
+					player.applyMatrix(sca);
+		
+					player.name = "loaded_mesh";
+		
+					scene.add( player );
+					} );
+				*/
 			}
+			
 
 			//Add Cube Geomtery (not included)
 			//AddCubes();
@@ -201,9 +278,18 @@ var noise = new SimplexNoise();
 				scene.add(ambientLight);
 				scene.add(spotLight);
 			}
+
+		function updatePlayer(mesh){
+			var targetY = normalize(mousePos.y,-.75,.75,25, 175);
+			var targetX = normalize(mousePos.x,-.75,.75,-100, 100);
+			mesh.position.y += (targetY-mesh.position.y)*0.1;
+			mesh.rotation.z = (targetY-mesh.position.y)*0.0128;
+			mesh.rotation.x = (mesh.position.y-targetY)*0.0064;
+		}
+
 		}
 		function updateCameraFov(){
-			camera.fov = normalize(mousePos.x,-1,1,40, 80);
+			camera.fov = normalize(mousePos.x,-1,1,40, 60);
 			camera.updateProjectionMatrix();
 		}
 			
@@ -231,12 +317,10 @@ var noise = new SimplexNoise();
 
 		document.getElementById('out').appendChild(renderer.domElement);
 
-		
-
 		render();
 
 	function render() {
-
+		updatePlayer(ball);
 		updateCameraFov();
 		//Seperates Frequency Data into lowest - highest + averages
 		{
@@ -262,7 +346,7 @@ var noise = new SimplexNoise();
 	
 		//Adds Rotation Values
 		{
-			var ballRotSpd = (overallAvg/10500)+0.005 //Adjustable Value//
+			var ballRotSpd = (overallAvg/10500) //Adjustable Value//
 			//var ballRotSpd = 0.005;
 			ball.rotation.x += ballRotSpd;
 			ball.rotation.y += ballRotSpd;
@@ -272,6 +356,12 @@ var noise = new SimplexNoise();
 		renderer.render(scene, camera);
 		requestAnimationFrame(render);
 	}
+//	createPlayer();
+//	function createPlayer(){
+//		player = new PlayerMesh();
+//		player.mesh.position.y = 100;
+//		scene.add(player);
+//	}
 		audio.play();
 	};
 
