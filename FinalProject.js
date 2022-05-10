@@ -164,6 +164,7 @@ function resetGame(){
 			hideReplay();
 		}
 	}
+
 	//Initializing Audio Management Variables
 	var context, src, analyser, bufferLength, dataArray;
 	function initializeAudioVariables(){
@@ -183,6 +184,22 @@ function resetGame(){
 			bufferLength = analyser.frequencyBinCount;
 			//standard 8-bit integers, holds the values of bufferLength for future use
 			dataArray = new Uint8Array(bufferLength);
+	}
+
+	var lowerHalfArray, upperHalfArray, overallAvg, lowerMax, lowerAvg, upperMax, upperAvg, lowerMaxFr, lowerAvgFr, upperMaxFr, upperAvgFr;
+	function updateAudioVariables(){
+		analyser.getByteFrequencyData(dataArray);
+		this.lowerHalfArray = dataArray.slice(0, (dataArray.length/2) - 1);
+		this.upperHalfArray = dataArray.slice((dataArray.length/2) - 1, dataArray.length - 1);
+		this.overallAvg = avg(dataArray);
+		this.lowerMax = max(lowerHalfArray);
+		this.lowerAvg = avg(lowerHalfArray);
+		this.upperMax = max(upperHalfArray);
+		this.upperAvg = avg(upperHalfArray);
+		this.lowerMaxFr = lowerMax / lowerHalfArray.length;
+		this.lowerAvgFr = lowerAvg / lowerHalfArray.length;
+		this.upperMaxFr = upperMax / upperHalfArray.length;
+		this.upperAvgFr = upperAvg / upperHalfArray.length;
 	}
 }
 
@@ -215,233 +232,238 @@ function AddCubes(){
 	};
 }
 
-Ennemy = function(){
-	var geom = new THREE.TetrahedronGeometry(8,2);
-	var mat = new THREE.MeshPhongMaterial({
-	  color:Colors.red,
-	  shininess:0,
-	  specular:0xffffff,
-	  shading:THREE.FlatShading
-	});
-	this.mesh = new THREE.Mesh(geom,mat);
-	this.mesh.castShadow = true;
-	this.angle = 0;
-	this.dist = 0;
+// Create & Add Partices, Enemies & Objectives
+{
+	Ennemy = function(){
+		var geom = new THREE.TetrahedronGeometry(8,2);
+		var mat = new THREE.MeshPhongMaterial({
+		  color:Colors.red,
+		  shininess:0,
+		  specular:0xffffff,
+		  shading:THREE.FlatShading
+		});
+		this.mesh = new THREE.Mesh(geom,mat);
+		this.mesh.castShadow = true;
+		this.angle = 0;
+		this.dist = 0;
+	}
+	
+	EnnemiesHolder = function (){
+		this.mesh = new THREE.Object3D();
+		this.ennemiesInUse = [];
+	}
+	
+	EnnemiesHolder.prototype.spawnEnnemies = function(){
+		var nEnnemies = game.level;
+	  
+		for (var i=0; i<nEnnemies; i++){
+		  var ennemy;
+		  if (ennemiesPool.length) {
+			ennemy = ennemiesPool.pop();
+		  }else{
+			ennemy = new Ennemy();
+		  }
+	  
+		  ennemy.angle = - (i*0.1);
+		  ennemy.distance = game.seaRadius + game.planeDefaultHeight + (-1 + Math.random() * 2) * (game.planeAmpHeight-20);
+		  ennemy.mesh.position.y = -game.seaRadius + Math.sin(ennemy.angle)*ennemy.distance;
+		  ennemy.mesh.position.x = Math.cos(ennemy.angle)*ennemy.distance;
+	  
+		  this.mesh.add(ennemy.mesh);
+		  this.ennemiesInUse.push(ennemy);
+		}
+	}
+	
+	EnnemiesHolder.prototype.rotateEnnemies = function(){
+		for (var i=0; i<this.ennemiesInUse.length; i++){
+		  var ennemy = this.ennemiesInUse[i];
+		  ennemy.angle += game.speed*deltaTime*game.ennemiesSpeed;
+	  
+		  if (ennemy.angle > Math.PI*2) ennemy.angle -= Math.PI*2;
+	  
+		  ennemy.mesh.position.y = -game.seaRadius + Math.sin(ennemy.angle)*ennemy.distance;
+		  ennemy.mesh.position.x = Math.cos(ennemy.angle)*ennemy.distance;
+		  ennemy.mesh.rotation.z += Math.random()*.1;
+		  ennemy.mesh.rotation.y += Math.random()*.1;
+	  
+		  //var globalEnnemyPosition =  ennemy.mesh.localToWorld(new THREE.Vector3());
+		  var diffPos = airplane.mesh.position.clone().sub(ennemy.mesh.position.clone());
+		  var d = diffPos.length();
+		  if (d<game.ennemyDistanceTolerance){
+			particlesHolder.spawnParticles(ennemy.mesh.position.clone(), 15, Colors.red, 3);
+	  
+			ennemiesPool.unshift(this.ennemiesInUse.splice(i,1)[0]);
+			this.mesh.remove(ennemy.mesh);
+			game.planeCollisionSpeedX = 100 * diffPos.x / d;
+			game.planeCollisionSpeedY = 100 * diffPos.y / d;
+			ambientLight.intensity = 2;
+	  
+			removeEnergy();
+			i--;
+		  }else if (ennemy.angle > Math.PI){
+			ennemiesPool.unshift(this.ennemiesInUse.splice(i,1)[0]);
+			this.mesh.remove(ennemy.mesh);
+			i--;
+		  }
+		}
+	}
+	
+	Particle = function(){
+		var geom = new THREE.TetrahedronGeometry(3,0);
+		var mat = new THREE.MeshPhongMaterial({
+		  color:0x009999,
+		  shininess:0,
+		  specular:0xffffff,
+		  shading:THREE.FlatShading
+		});
+		this.mesh = new THREE.Mesh(geom,mat);
+	}
+	
+	Particle.prototype.explode = function(pos, color, scale){
+		var _this = this;
+		var _p = this.mesh.parent;
+		this.mesh.material.color = new THREE.Color( color);
+		this.mesh.material.needsUpdate = true;
+		this.mesh.scale.set(scale, scale, scale);
+		var targetX = pos.x + (-1 + Math.random()*2)*50;
+		var targetY = pos.y + (-1 + Math.random()*2)*50;
+		var speed = .6+Math.random()*.2;
+		TweenMax.to(this.mesh.rotation, speed, {x:Math.random()*12, y:Math.random()*12});
+		TweenMax.to(this.mesh.scale, speed, {x:.1, y:.1, z:.1});
+		TweenMax.to(this.mesh.position, speed, {x:targetX, y:targetY, delay:Math.random() *.1, ease:Power2.easeOut, onComplete:function(){
+			if(_p) _p.remove(_this.mesh);
+			_this.mesh.scale.set(1,1,1);
+			particlesPool.unshift(_this);
+		  }});
+	}
+	
+	ParticlesHolder = function (){
+		this.mesh = new THREE.Object3D();
+		this.particlesInUse = [];
+	}
+	  
+	ParticlesHolder.prototype.spawnParticles = function(pos, density, color, scale){
+	  
+		var nPArticles = density;
+		for (var i=0; i<nPArticles; i++){
+		  var particle;
+		  if (particlesPool.length) {
+			particle = particlesPool.pop();
+		  }else{
+			particle = new Particle();
+		  }
+		  this.mesh.add(particle.mesh);
+		  particle.mesh.visible = true;
+		  var _this = this;
+		  particle.mesh.position.y = pos.y;
+		  particle.mesh.position.x = pos.x;
+		  particle.explode(pos,color, scale);
+		}
+	}
+	  
+	Coin = function(){
+		var geom = new THREE.TetrahedronGeometry(5,0);
+		var mat = new THREE.MeshPhongMaterial({
+		  color:0x009999,
+		  shininess:0,
+		  specular:0xffffff,
+	  
+		  shading:THREE.FlatShading
+		});
+		this.mesh = new THREE.Mesh(geom,mat);
+		this.mesh.castShadow = true;
+		this.angle = 0;
+		this.dist = 0;
+	}
+	  
+	CoinsHolder = function (nCoins){
+		this.mesh = new THREE.Object3D();
+		this.coinsInUse = [];
+		this.coinsPool = [];
+		for (var i=0; i<nCoins; i++){
+		  var coin = new Coin();
+		  this.coinsPool.push(coin);
+		}
+	}
+	  
+	CoinsHolder.prototype.spawnCoins = function(){
+	  
+		var nCoins = 1 + Math.floor(Math.random()*10);
+		var d = game.seaRadius + game.planeDefaultHeight + (-1 + Math.random() * 2) * (game.planeAmpHeight-20);
+		var amplitude = 10 + Math.round(Math.random()*10);
+		for (var i=0; i<nCoins; i++){
+		  var coin;
+		  if (this.coinsPool.length) {
+			coin = this.coinsPool.pop();
+		  }else{
+			coin = new Coin();
+		  }
+		  this.mesh.add(coin.mesh);
+		  this.coinsInUse.push(coin);
+		  coin.angle = - (i*0.02);
+		  coin.distance = d + Math.cos(i*.5)*amplitude;
+		  coin.mesh.position.y = -game.seaRadius + Math.sin(coin.angle)*coin.distance;
+		  coin.mesh.position.x = Math.cos(coin.angle)*coin.distance;
+		}
+	}
+	  
+	CoinsHolder.prototype.rotateCoins = function(){
+		for (var i=0; i<this.coinsInUse.length; i++){
+		  var coin = this.coinsInUse[i];
+		  if (coin.exploding) continue;
+		  coin.angle += game.speed*deltaTime*game.coinsSpeed;
+		  if (coin.angle>Math.PI*2) coin.angle -= Math.PI*2;
+		  coin.mesh.position.y = -game.seaRadius + Math.sin(coin.angle)*coin.distance;
+		  coin.mesh.position.x = Math.cos(coin.angle)*coin.distance;
+		  coin.mesh.rotation.z += Math.random()*.1;
+		  coin.mesh.rotation.y += Math.random()*.1;
+	  
+		  //var globalCoinPosition =  coin.mesh.localToWorld(new THREE.Vector3());
+		  var diffPos = airplane.mesh.position.clone().sub(coin.mesh.position.clone());
+		  var d = diffPos.length();
+		  if (d<game.coinDistanceTolerance){
+			this.coinsPool.unshift(this.coinsInUse.splice(i,1)[0]);
+			this.mesh.remove(coin.mesh);
+			particlesHolder.spawnParticles(coin.mesh.position.clone(), 5, 0x009999, .8);
+			addEnergy();
+			i--;
+		  }else if (coin.angle > Math.PI){
+			this.coinsPool.unshift(this.coinsInUse.splice(i,1)[0]);
+			this.mesh.remove(coin.mesh);
+			i--;
+		  }
+		}
+	}
+	
+	function createCoins(){
+		coinsHolder = new CoinsHolder(20);
+		scene.add(coinsHolder.mesh)
+	}
+	
+	function createEnnemies(){
+		for (var i=0; i<10; i++){
+		  var ennemy = new Ennemy();
+		  ennemiesPool.push(ennemy);
+		}
+		ennemiesHolder = new EnnemiesHolder();
+		//ennemiesHolder.mesh.position.y = -game.seaRadius;
+		scene.add(ennemiesHolder.mesh)
+	}
+	  
+	function createParticles(){
+		for (var i=0; i<10; i++){
+		  var particle = new Particle();
+		  particlesPool.push(particle);
+		}
+		particlesHolder = new ParticlesHolder();
+		//ennemiesHolder.mesh.position.y = -game.seaRadius;
+		scene.add(particlesHolder.mesh)
+	}
 }
 
-EnnemiesHolder = function (){
-	this.mesh = new THREE.Object3D();
-	this.ennemiesInUse = [];
-}
-
-EnnemiesHolder.prototype.spawnEnnemies = function(){
-	var nEnnemies = game.level;
-  
-	for (var i=0; i<nEnnemies; i++){
-	  var ennemy;
-	  if (ennemiesPool.length) {
-		ennemy = ennemiesPool.pop();
-	  }else{
-		ennemy = new Ennemy();
-	  }
-  
-	  ennemy.angle = - (i*0.1);
-	  ennemy.distance = game.seaRadius + game.planeDefaultHeight + (-1 + Math.random() * 2) * (game.planeAmpHeight-20);
-	  ennemy.mesh.position.y = -game.seaRadius + Math.sin(ennemy.angle)*ennemy.distance;
-	  ennemy.mesh.position.x = Math.cos(ennemy.angle)*ennemy.distance;
-  
-	  this.mesh.add(ennemy.mesh);
-	  this.ennemiesInUse.push(ennemy);
-	}
-  }
-
-EnnemiesHolder.prototype.rotateEnnemies = function(){
-	for (var i=0; i<this.ennemiesInUse.length; i++){
-	  var ennemy = this.ennemiesInUse[i];
-	  ennemy.angle += game.speed*deltaTime*game.ennemiesSpeed;
-  
-	  if (ennemy.angle > Math.PI*2) ennemy.angle -= Math.PI*2;
-  
-	  ennemy.mesh.position.y = -game.seaRadius + Math.sin(ennemy.angle)*ennemy.distance;
-	  ennemy.mesh.position.x = Math.cos(ennemy.angle)*ennemy.distance;
-	  ennemy.mesh.rotation.z += Math.random()*.1;
-	  ennemy.mesh.rotation.y += Math.random()*.1;
-  
-	  //var globalEnnemyPosition =  ennemy.mesh.localToWorld(new THREE.Vector3());
-	  var diffPos = airplane.mesh.position.clone().sub(ennemy.mesh.position.clone());
-	  var d = diffPos.length();
-	  if (d<game.ennemyDistanceTolerance){
-		particlesHolder.spawnParticles(ennemy.mesh.position.clone(), 15, Colors.red, 3);
-  
-		ennemiesPool.unshift(this.ennemiesInUse.splice(i,1)[0]);
-		this.mesh.remove(ennemy.mesh);
-		game.planeCollisionSpeedX = 100 * diffPos.x / d;
-		game.planeCollisionSpeedY = 100 * diffPos.y / d;
-		ambientLight.intensity = 2;
-  
-		removeEnergy();
-		i--;
-	  }else if (ennemy.angle > Math.PI){
-		ennemiesPool.unshift(this.ennemiesInUse.splice(i,1)[0]);
-		this.mesh.remove(ennemy.mesh);
-		i--;
-	  }
-	}
-}
-
-Particle = function(){
-	var geom = new THREE.TetrahedronGeometry(3,0);
-	var mat = new THREE.MeshPhongMaterial({
-	  color:0x009999,
-	  shininess:0,
-	  specular:0xffffff,
-	  shading:THREE.FlatShading
-	});
-	this.mesh = new THREE.Mesh(geom,mat);
-}
-
-Particle.prototype.explode = function(pos, color, scale){
-	var _this = this;
-	var _p = this.mesh.parent;
-	this.mesh.material.color = new THREE.Color( color);
-	this.mesh.material.needsUpdate = true;
-	this.mesh.scale.set(scale, scale, scale);
-	var targetX = pos.x + (-1 + Math.random()*2)*50;
-	var targetY = pos.y + (-1 + Math.random()*2)*50;
-	var speed = .6+Math.random()*.2;
-	TweenMax.to(this.mesh.rotation, speed, {x:Math.random()*12, y:Math.random()*12});
-	TweenMax.to(this.mesh.scale, speed, {x:.1, y:.1, z:.1});
-	TweenMax.to(this.mesh.position, speed, {x:targetX, y:targetY, delay:Math.random() *.1, ease:Power2.easeOut, onComplete:function(){
-		if(_p) _p.remove(_this.mesh);
-		_this.mesh.scale.set(1,1,1);
-		particlesPool.unshift(_this);
-	  }});
-}
-
-ParticlesHolder = function (){
-	this.mesh = new THREE.Object3D();
-	this.particlesInUse = [];
-}
-  
-ParticlesHolder.prototype.spawnParticles = function(pos, density, color, scale){
-  
-	var nPArticles = density;
-	for (var i=0; i<nPArticles; i++){
-	  var particle;
-	  if (particlesPool.length) {
-		particle = particlesPool.pop();
-	  }else{
-		particle = new Particle();
-	  }
-	  this.mesh.add(particle.mesh);
-	  particle.mesh.visible = true;
-	  var _this = this;
-	  particle.mesh.position.y = pos.y;
-	  particle.mesh.position.x = pos.x;
-	  particle.explode(pos,color, scale);
-	}
-}
-  
-Coin = function(){
-	var geom = new THREE.TetrahedronGeometry(5,0);
-	var mat = new THREE.MeshPhongMaterial({
-	  color:0x009999,
-	  shininess:0,
-	  specular:0xffffff,
-  
-	  shading:THREE.FlatShading
-	});
-	this.mesh = new THREE.Mesh(geom,mat);
-	this.mesh.castShadow = true;
-	this.angle = 0;
-	this.dist = 0;
-}
-  
-CoinsHolder = function (nCoins){
-	this.mesh = new THREE.Object3D();
-	this.coinsInUse = [];
-	this.coinsPool = [];
-	for (var i=0; i<nCoins; i++){
-	  var coin = new Coin();
-	  this.coinsPool.push(coin);
-	}
-}
-  
-CoinsHolder.prototype.spawnCoins = function(){
-  
-	var nCoins = 1 + Math.floor(Math.random()*10);
-	var d = game.seaRadius + game.planeDefaultHeight + (-1 + Math.random() * 2) * (game.planeAmpHeight-20);
-	var amplitude = 10 + Math.round(Math.random()*10);
-	for (var i=0; i<nCoins; i++){
-	  var coin;
-	  if (this.coinsPool.length) {
-		coin = this.coinsPool.pop();
-	  }else{
-		coin = new Coin();
-	  }
-	  this.mesh.add(coin.mesh);
-	  this.coinsInUse.push(coin);
-	  coin.angle = - (i*0.02);
-	  coin.distance = d + Math.cos(i*.5)*amplitude;
-	  coin.mesh.position.y = -game.seaRadius + Math.sin(coin.angle)*coin.distance;
-	  coin.mesh.position.x = Math.cos(coin.angle)*coin.distance;
-	}
-}
-  
-CoinsHolder.prototype.rotateCoins = function(){
-	for (var i=0; i<this.coinsInUse.length; i++){
-	  var coin = this.coinsInUse[i];
-	  if (coin.exploding) continue;
-	  coin.angle += game.speed*deltaTime*game.coinsSpeed;
-	  if (coin.angle>Math.PI*2) coin.angle -= Math.PI*2;
-	  coin.mesh.position.y = -game.seaRadius + Math.sin(coin.angle)*coin.distance;
-	  coin.mesh.position.x = Math.cos(coin.angle)*coin.distance;
-	  coin.mesh.rotation.z += Math.random()*.1;
-	  coin.mesh.rotation.y += Math.random()*.1;
-  
-	  //var globalCoinPosition =  coin.mesh.localToWorld(new THREE.Vector3());
-	  var diffPos = airplane.mesh.position.clone().sub(coin.mesh.position.clone());
-	  var d = diffPos.length();
-	  if (d<game.coinDistanceTolerance){
-		this.coinsPool.unshift(this.coinsInUse.splice(i,1)[0]);
-		this.mesh.remove(coin.mesh);
-		particlesHolder.spawnParticles(coin.mesh.position.clone(), 5, 0x009999, .8);
-		addEnergy();
-		i--;
-	  }else if (coin.angle > Math.PI){
-		this.coinsPool.unshift(this.coinsInUse.splice(i,1)[0]);
-		this.mesh.remove(coin.mesh);
-		i--;
-	  }
-	}
-}
-
-function createCoins(){
-	coinsHolder = new CoinsHolder(20);
-	scene.add(coinsHolder.mesh)
-}
-
-function createEnnemies(){
-	for (var i=0; i<10; i++){
-	  var ennemy = new Ennemy();
-	  ennemiesPool.push(ennemy);
-	}
-	ennemiesHolder = new EnnemiesHolder();
-	//ennemiesHolder.mesh.position.y = -game.seaRadius;
-	scene.add(ennemiesHolder.mesh)
-}
-  
-function createParticles(){
-	for (var i=0; i<10; i++){
-	  var particle = new Particle();
-	  particlesPool.push(particle);
-	}
-	particlesHolder = new ParticlesHolder();
-	//ennemiesHolder.mesh.position.y = -game.seaRadius;
-	scene.add(particlesHolder.mesh)
-}
 
 	function play(event) {
+
 		fieldDistance = document.getElementById("distValue");
 		energyBar = document.getElementById("energyBar");
 		replayMessage = document.getElementById("replayMessage");
@@ -586,7 +608,7 @@ function createParticles(){
 			scene.add(spotLight);
 		}
 
-		createCoins();
+		//createCoins();
 		//createEnnemies();
 		//createParticles();
 		
@@ -630,10 +652,11 @@ function createParticles(){
 
 
 		
-		function updateCameraFov(){
-			camera.fov = normalize(mousePos.x,-1,1,50, 70);
+		function updateCameraFov(amount){
+			camera.fov = normalize(amount,-1,1,50, 70);
 			camera.updateProjectionMatrix();
 		}
+		//mousePos.x
 			
 		function normalize(v,vmin,vmax,tmin, tmax){
 			var nv = Math.max(Math.min(v,vmax), vmin);
@@ -654,24 +677,11 @@ function createParticles(){
 		document.addEventListener('touchend', handleTouchEnd, false);
 
 	function render() {
+		updateAudioVariables();
+	
+
 		updatePlayer(cube);
-		updateCameraFov();
-		
-		//Seperates Frequency Data into lowest - highest + averages
-		{
-			analyser.getByteFrequencyData(dataArray);
-			var lowerHalfArray = dataArray.slice(0, (dataArray.length/2) - 1);
-			var upperHalfArray = dataArray.slice((dataArray.length/2) - 1, dataArray.length - 1);
-			var overallAvg = avg(dataArray);
-			var lowerMax = max(lowerHalfArray);
-			var lowerAvg = avg(lowerHalfArray);
-			var upperMax = max(upperHalfArray);
-			var upperAvg = avg(upperHalfArray);
-			var lowerMaxFr = lowerMax / lowerHalfArray.length;
-			var lowerAvgFr = lowerAvg / lowerHalfArray.length;
-			var upperMaxFr = upperMax / upperHalfArray.length;
-			var upperAvgFr = upperAvg / upperHalfArray.length;
-		}
+		updateCameraFov(overallAvg/150);
 	
 		//Adds Mesh Distortion
 		{
@@ -683,9 +693,9 @@ function createParticles(){
 		{
 			var ballRotSpd = (overallAvg/10500) //Adjustable Value//
 			//var ballRotSpd = 0.005;
-			//ball.rotation.x += ballRotSpd;
-			//ball.rotation.y += ballRotSpd;
-			//ball.rotation.z += ballRotSpd;
+			ball.rotation.x += ballRotSpd;
+			ball.rotation.y += ballRotSpd;
+			ball.rotation.z += ballRotSpd;
 			group.rotation.z += ballRotSpd;
 			group2.rotation.z += -ballRotSpd;
 		}
