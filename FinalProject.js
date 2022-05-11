@@ -497,6 +497,55 @@ function AddPlayerModel(){
 	});
 }
 
+var clock, stats, controlParameters, mesh, uniforms, composer, shaderMaterial;
+
+function AddShaders(){
+	clock = new THREE.Clock(true);
+	stats = new Stats();
+	stats.dom.style.cssText = "";
+	document.getElementById("sketch-stats").appendChild(stats.dom);
+
+	uniforms = {
+		u_time : {
+			type : "f",
+			value : 0.0
+		},
+		u_frame : {
+			type : "f",
+			value : 0.0
+		},
+		u_resolution : {
+			type : "v2",
+			value : new THREE.Vector2(window.innerWidth, window.innerHeight)
+					.multiplyScalar(window.devicePixelRatio)
+		},
+		u_mouse : {
+			type : "v2",
+			value : new THREE.Vector2(0.5 * window.innerWidth, window.innerHeight)
+					.multiplyScalar(window.devicePixelRatio)
+		},
+		u_texture : {
+			type : "t",
+			value : null
+		}
+	};
+
+	// Create the shader material
+	var shaderMaterial = new THREE.ShaderMaterial({
+		uniforms : uniforms,
+		vertexShader : document.getElementById("vertexShader").textContent,
+		fragmentShader : document.getElementById("fragmentShader").textContent
+	});
+
+	// Initialize the effect composer
+	composer = new THREE.EffectComposer(renderer);
+	composer.addPass(new THREE.RenderPass(scene, camera));
+
+	// Add the post-processing effect
+	var effect = new THREE.ShaderPass(material, "u_texture");
+	effect.renderToScreen = true;
+	composer.addPass(effect);
+}
 
 	function play(event) {
 
@@ -661,6 +710,10 @@ function AddPlayerModel(){
 			//mousePos.x
 		}
 
+		function updateShaders(){
+
+		}
+
 //		function updatePlayer(mesh){
 //
 //			game.planeSpeed = normalize(mousePos.x,-.5,.5,game.planeMinSpeed, game.planeMaxSpeed);
@@ -718,7 +771,7 @@ function AddPlayerModel(){
 	function render() {
 		updateAudioVariables();
 	
-
+		updateShaders();
 		updatePlayer(cube, overallAvg/150);
 		updateCameraFov(overallAvg/150);
 	
