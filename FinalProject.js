@@ -1,5 +1,6 @@
 //IMPORT SPACESHIP MODEL FOR CRAFT
 //CLEAN UP CODE LMAO
+//Add GUI - Adjustable volumne, colours, lighting, mesh distortion intensity ect.
 
 var noise = new SimplexNoise();
 var file = document.getElementById("thefile");
@@ -96,9 +97,14 @@ function resetGame(){
   fieldLevel.innerHTML = Math.floor(game.level);
 }
 
+//createScene() Variables
+var scene, camera, fieldOfView, aspectRatio, nearPlane, farPlane, renderer, container, group, group1, group2, HEIGHT, WIDTH;
+//InitializeAudioVariables()
+var context, src, analyser, bufferLength, dataArray;
+//UpdateAudioVariables()
+var lowerHalfArray, upperHalfArray, overallAvg, lowerMax, lowerAvg, upperMax, upperAvg, lowerMaxFr, lowerAvgFr, upperMaxFr, upperAvgFr;
 //Scene, Audio, Window & Input Management
 {
-	var scene, camera, fieldOfView, aspectRatio, nearPlane, farPlane, renderer, container, group, group1, group2, HEIGHT, WIDTH;
 	function createScene(){
 		HEIGHT = window.innerHeight;
 		WIDTH = window.innerWidth;
@@ -166,7 +172,6 @@ function resetGame(){
 	}
 
 	//Initializing Audio Management Variables
-	var context, src, analyser, bufferLength, dataArray;
 	function initializeAudioVariables(){
 			//AudioContext() is a linked list of Audio nodes that contains audio data
 			context = new AudioContext();
@@ -186,7 +191,6 @@ function resetGame(){
 			dataArray = new Uint8Array(bufferLength);
 	}
 
-	var lowerHalfArray, upperHalfArray, overallAvg, lowerMax, lowerAvg, upperMax, upperAvg, lowerMaxFr, lowerAvgFr, upperMaxFr, upperAvgFr;
 	function updateAudioVariables(){
 		analyser.getByteFrequencyData(dataArray);
 		this.lowerHalfArray = dataArray.slice(0, (dataArray.length/2) - 1);
@@ -202,7 +206,6 @@ function resetGame(){
 		this.upperAvgFr = upperAvg / upperHalfArray.length;
 	}
 }
-
 
 function AddCubes(){
 
@@ -461,6 +464,39 @@ function AddCubes(){
 	}
 }
 
+function CreateSpheres(){
+
+}
+var ball1, ball2;
+function AddSpheres(){
+	var icosahedronGeometry = new THREE.IcosahedronGeometry(10, 3); //Adjustable Values//
+	var ballMaterial = new THREE.MeshLambertMaterial({
+		color: new THREE.Color("rgb(255, 0, 0)"),
+		//new THREE.Color("rgb(0, 0, 100)"),
+		//0xff00ee,
+		wireframe: true
+	});
+	ball1 = new THREE.Mesh(icosahedronGeometry, ballMaterial);
+	ball2 = new THREE.Mesh(icosahedronGeometry, ballMaterial);
+	ball1.position.y = 105;
+	ball1.position.x = 75;
+	ball2.position.y = 105;
+	ball2.position.x = -75;
+	group1.add(ball1);
+	group1.add(ball2);
+	scene.add(group1);
+}
+
+var playerLoader, playerMesh, scaleFactIn;
+function AddPlayerModel(){
+	playerLoader = new THREE.PLYLoader();
+	scaleFactIn = 5.0;
+	playerLoader.load('models/small_fighter.ply', function(geometry){
+		geometry.computeVertexNormals();
+		geometry.computeBoundingBox
+	});
+}
+
 
 	function play(event) {
 
@@ -511,6 +547,21 @@ function AddCubes(){
 				return planeArr[num];
 			};
 
+			var bgplaneGeometry = new THREE.PlaneGeometry(1500, 1500, 50, 50);
+			var bgplaneMat =  new THREE.MeshLambertMaterial({
+				color: "rgb(100, 0, 0)", //Adjustable Values
+				//new THREE.Color("rgb(100, 0, 0)"),
+				//0x68228b
+				side: THREE.DoubleSide,
+				wireframe: false
+			});
+
+			var backgroundPlane = new THREE.Mesh(bgplaneGeometry, bgplaneMat);
+			backgroundPlane.position.y = 105;
+			backgroundPlane.position.z = -1000
+
+			//scene.add(backgroundPlane);
+
 			group.add(getPlanes(0));
 			for(i = 1; i<n; i++){
 				group.add(planeArr[i]);
@@ -529,26 +580,14 @@ function AddCubes(){
 		
 		}
 
-		//Add Sphere Geometry (icosahedron with adjustable detail, wireframe on)
-		{
-			var icosahedronGeometry = new THREE.IcosahedronGeometry(10, 3); //Adjustable Values//
-			var ballMaterial = new THREE.MeshLambertMaterial({
-				color: new THREE.Color("rgb(255, 0, 0)"),
-				//new THREE.Color("rgb(0, 0, 100)"),
-				//0xff00ee,
-				wireframe: true
-			});
-			var ball = new THREE.Mesh(icosahedronGeometry, ballMaterial);
-			//ball.position.set(0, 0, 0);
-			ball.position.y = 150;
-			scene.add(ball);
-		}
+		AddSpheres();
+
 
 		//Add Temp Player Geometry
 		{
 			var cubeGeometry = new THREE.BoxGeometry(20,20,20,1,1,1);
 			var cubeMat = new THREE.MeshLambertMaterial({
-				color: new THREE.Color("rgb(255, 0, 0)"),
+				color: 0xff00ee,
 				//new THREE.Color("rgb(0, 0, 100)"),
 				//0xff00ee,
 				wireframe: true
@@ -602,7 +641,7 @@ function AddCubes(){
 			var spotLight = new THREE.SpotLight(0xffffff);
 			spotLight.intensity = 0.9; //Adjustable Values
 			spotLight.position.set(-10, 40, 20);
-			spotLight.lookAt(ball);
+			spotLight.lookAt(ball1);
 			spotLight.castShadow = true;
 			scene.add(ambientLight);
 			scene.add(spotLight);
@@ -612,12 +651,14 @@ function AddCubes(){
 		//createEnnemies();
 		//createParticles();
 		
-		function updatePlayer(mesh){
-			var targetY = normalize(mousePos.y,-.75,.75,50, 175);
-			var targetX = normalize(mousePos.x,-.75,.75,-100, 100);
+		function updatePlayer(mesh, amount){
+			var targetY = normalize(amount,-.75,.75,25, 150);
+			var targetX = normalize(amount,-.75,.75,-100, 100);
 			mesh.position.y += (targetY-mesh.position.y)*0.1;
 			mesh.rotation.z = (targetY-mesh.position.y)*0.0128;
 			mesh.rotation.x = (mesh.position.y-targetY)*0.0064;
+			//mousePos.y
+			//mousePos.x
 		}
 
 //		function updatePlayer(mesh){
@@ -650,8 +691,6 @@ function AddCubes(){
 //		  
 //		}
 
-
-		
 		function updateCameraFov(amount){
 			camera.fov = normalize(amount,-1,1,50, 70);
 			camera.updateProjectionMatrix();
@@ -680,24 +719,32 @@ function AddCubes(){
 		updateAudioVariables();
 	
 
-		updatePlayer(cube);
+		updatePlayer(cube, overallAvg/150);
 		updateCameraFov(overallAvg/150);
 	
 		//Adds Mesh Distortion
 		{
 			distortPlane(getPlanes(0), modulate(upperAvgFr, 0, 1, 0.5, 4));
-			distortBall(ball, modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8), modulate(upperAvgFr, 0, 1, 0, 4));
+			distortBall(ball1, modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8), modulate(upperAvgFr, 0, 1, 0, 4));
+			distortBall(ball2, modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8), modulate(upperAvgFr, 0, 1, 0, 4));
 		}
 	
 		//Adds Rotation Values
 		{
 			var ballRotSpd = (overallAvg/10500) //Adjustable Value//
 			//var ballRotSpd = 0.005;
-			ball.rotation.x += ballRotSpd;
-			ball.rotation.y += ballRotSpd;
-			ball.rotation.z += ballRotSpd;
-			group.rotation.z += ballRotSpd;
-			group2.rotation.z += -ballRotSpd;
+			ball1.rotation.x += ballRotSpd;
+			ball1.rotation.y += ballRotSpd;
+			ball1.rotation.z += ballRotSpd;
+			ball2.rotation.x += ballRotSpd;
+			ball2.rotation.y += ballRotSpd;
+			ball2.rotation.z += ballRotSpd;
+
+			//group1
+			//group1.rotation.z += ballRotSpd/2;
+			
+			group.rotation.z += ballRotSpd/2;
+			group2.rotation.z += -ballRotSpd/2;
 		}
 		renderer.render(scene, camera);
 		requestAnimationFrame(render);
