@@ -24,6 +24,7 @@ file.onchange = function(){
 	play();
 }
 
+{
 // GAME VARIABLES
 var game;
 var deltaTime = 0;
@@ -96,6 +97,10 @@ function resetGame(){
          };
   fieldLevel.innerHTML = Math.floor(game.level);
 }
+}
+
+//var shaderMaterial
+
 
 //createScene() Variables
 var scene, camera, fieldOfView, aspectRatio, nearPlane, farPlane, renderer, container, group, group1, group2, HEIGHT, WIDTH;
@@ -497,6 +502,7 @@ function AddPlayerModel(){
 	});
 }
 
+
 var clock, stats, controlParameters, mesh, uniforms, composer, shaderMaterial;
 
 function AddShaders(){
@@ -532,7 +538,7 @@ function AddShaders(){
 
 	// Create the shader material
 	var shaderMaterial = new THREE.ShaderMaterial({
-		uniforms : uniforms,
+		//uniforms : uniforms,
 		vertexShader : document.getElementById("vertexShader").textContent,
 		fragmentShader : document.getElementById("fragmentShader").textContent
 	});

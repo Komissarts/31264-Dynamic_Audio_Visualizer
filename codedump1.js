@@ -1,5 +1,6 @@
 //IMPORT SPACESHIP MODEL FOR CRAFT
 //CLEAN UP CODE LMAO
+//Add GUI - Adjustable volumne, colours, lighting, mesh distortion intensity ect.
 
 var noise = new SimplexNoise();
 var file = document.getElementById("thefile");
@@ -23,6 +24,7 @@ file.onchange = function(){
 	play();
 }
 
+{
 // GAME VARIABLES
 var game;
 var deltaTime = 0;
@@ -95,10 +97,19 @@ function resetGame(){
          };
   fieldLevel.innerHTML = Math.floor(game.level);
 }
+}
 
+//var shaderMaterial
+
+
+//createScene() Variables
+var scene, camera, fieldOfView, aspectRatio, nearPlane, farPlane, renderer, container, group, group1, group2, HEIGHT, WIDTH;
+//InitializeAudioVariables()
+var context, src, analyser, bufferLength, dataArray;
+//UpdateAudioVariables()
+var lowerHalfArray, upperHalfArray, overallAvg, lowerMax, lowerAvg, upperMax, upperAvg, lowerMaxFr, lowerAvgFr, upperMaxFr, upperAvgFr;
 //Scene, Audio, Window & Input Management
 {
-	var scene, camera, fieldOfView, aspectRatio, nearPlane, farPlane, renderer, container, group, group1, group2, HEIGHT, WIDTH;
 	function createScene(){
 		HEIGHT = window.innerHeight;
 		WIDTH = window.innerWidth;
@@ -166,7 +177,6 @@ function resetGame(){
 	}
 
 	//Initializing Audio Management Variables
-	var context, src, analyser, bufferLength, dataArray;
 	function initializeAudioVariables(){
 			//AudioContext() is a linked list of Audio nodes that contains audio data
 			context = new AudioContext();
@@ -186,7 +196,6 @@ function resetGame(){
 			dataArray = new Uint8Array(bufferLength);
 	}
 
-	var lowerHalfArray, upperHalfArray, overallAvg, lowerMax, lowerAvg, upperMax, upperAvg, lowerMaxFr, lowerAvgFr, upperMaxFr, upperAvgFr;
 	function updateAudioVariables(){
 		analyser.getByteFrequencyData(dataArray);
 		this.lowerHalfArray = dataArray.slice(0, (dataArray.length/2) - 1);
@@ -202,7 +211,6 @@ function resetGame(){
 		this.upperAvgFr = upperAvg / upperHalfArray.length;
 	}
 }
-
 
 function AddCubes(){
 
@@ -484,10 +492,66 @@ function AddSpheres(){
 	scene.add(group1);
 }
 
+var playerLoader, playerMesh, scaleFactIn;
 function AddPlayerModel(){
-	
+	playerLoader = new THREE.PLYLoader();
+	scaleFactIn = 5.0;
+	playerLoader.load('models/small_fighter.ply', function(geometry){
+		geometry.computeVertexNormals();
+		geometry.computeBoundingBox
+	});
 }
 
+
+var clock, stats, controlParameters, mesh, uniforms, composer, shaderMaterial;
+
+function AddShaders(){
+	clock = new THREE.Clock(true);
+	stats = new Stats();
+	stats.dom.style.cssText = "";
+	document.getElementById("sketch-stats").appendChild(stats.dom);
+
+	uniforms = {
+		u_time : {
+			type : "f",
+			value : 0.0
+		},
+		u_frame : {
+			type : "f",
+			value : 0.0
+		},
+		u_resolution : {
+			type : "v2",
+			value : new THREE.Vector2(window.innerWidth, window.innerHeight)
+					.multiplyScalar(window.devicePixelRatio)
+		},
+		u_mouse : {
+			type : "v2",
+			value : new THREE.Vector2(0.5 * window.innerWidth, window.innerHeight)
+					.multiplyScalar(window.devicePixelRatio)
+		},
+		u_texture : {
+			type : "t",
+			value : null
+		}
+	};
+
+	// Create the shader material
+	var shaderMaterial = new THREE.ShaderMaterial({
+		//uniforms : uniforms,
+		vertexShader : document.getElementById("vertexShader").textContent,
+		fragmentShader : document.getElementById("fragmentShader").textContent
+	});
+
+	// Initialize the effect composer
+	composer = new THREE.EffectComposer(renderer);
+	composer.addPass(new THREE.RenderPass(scene, camera));
+
+	// Add the post-processing effect
+	var effect = new THREE.ShaderPass(material, "u_texture");
+	effect.renderToScreen = true;
+	composer.addPass(effect);
+}
 
 	function play(event) {
 
@@ -538,6 +602,21 @@ function AddPlayerModel(){
 				return planeArr[num];
 			};
 
+			var bgplaneGeometry = new THREE.PlaneGeometry(1500, 1500, 50, 50);
+			var bgplaneMat =  new THREE.MeshLambertMaterial({
+				color: "rgb(100, 0, 0)", //Adjustable Values
+				//new THREE.Color("rgb(100, 0, 0)"),
+				//0x68228b
+				side: THREE.DoubleSide,
+				wireframe: false
+			});
+
+			var backgroundPlane = new THREE.Mesh(bgplaneGeometry, bgplaneMat);
+			backgroundPlane.position.y = 105;
+			backgroundPlane.position.z = -1000
+
+			//scene.add(backgroundPlane);
+
 			group.add(getPlanes(0));
 			for(i = 1; i<n; i++){
 				group.add(planeArr[i]);
@@ -563,7 +642,7 @@ function AddPlayerModel(){
 		{
 			var cubeGeometry = new THREE.BoxGeometry(20,20,20,1,1,1);
 			var cubeMat = new THREE.MeshLambertMaterial({
-				color: new THREE.Color("rgb(255, 0, 0)"),
+				color: 0xff00ee,
 				//new THREE.Color("rgb(0, 0, 100)"),
 				//0xff00ee,
 				wireframe: true
@@ -627,12 +706,18 @@ function AddPlayerModel(){
 		//createEnnemies();
 		//createParticles();
 		
-		function updatePlayer(mesh){
-			var targetY = normalize(mousePos.y,-.75,.75,50, 175);
-			var targetX = normalize(mousePos.x,-.75,.75,-100, 100);
+		function updatePlayer(mesh, amount){
+			var targetY = normalize(amount,-.75,.75,25, 150);
+			var targetX = normalize(amount,-.75,.75,-100, 100);
 			mesh.position.y += (targetY-mesh.position.y)*0.1;
 			mesh.rotation.z = (targetY-mesh.position.y)*0.0128;
 			mesh.rotation.x = (mesh.position.y-targetY)*0.0064;
+			//mousePos.y
+			//mousePos.x
+		}
+
+		function updateShaders(){
+
 		}
 
 //		function updatePlayer(mesh){
@@ -665,8 +750,6 @@ function AddPlayerModel(){
 //		  
 //		}
 
-
-		
 		function updateCameraFov(amount){
 			camera.fov = normalize(amount,-1,1,50, 70);
 			camera.updateProjectionMatrix();
@@ -694,8 +777,8 @@ function AddPlayerModel(){
 	function render() {
 		updateAudioVariables();
 	
-
-		updatePlayer(cube);
+		updateShaders();
+		updatePlayer(cube, overallAvg/150);
 		updateCameraFov(overallAvg/150);
 	
 		//Adds Mesh Distortion
@@ -717,9 +800,10 @@ function AddPlayerModel(){
 			ball2.rotation.z += ballRotSpd;
 
 			//group1
+			//group1.rotation.z += ballRotSpd/2;
 			
-			group.rotation.z += ballRotSpd;
-			group2.rotation.z += -ballRotSpd;
+			group.rotation.z += ballRotSpd/2;
+			group2.rotation.z += -ballRotSpd/2;
 		}
 		renderer.render(scene, camera);
 		requestAnimationFrame(render);
