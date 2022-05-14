@@ -4,26 +4,31 @@
 //import {EffectComposer} from 'js/EffectComposer.js';
 //import {RenderPass} from 'js/RenderPass.js';
 
-var noise = new SimplexNoise();
-var file = document.getElementById("thefile");
-var audio = document.getElementById("audio");
-var fileLabel = document.querySelector("label.file");
 
-document.onload = function(){
-	console.log(e);
-	audio.play();
-	play();
-}
 
-file.onchange = function(){
-	fileLabel.classList.add('normal');
-	audio.classList.add('active');
-	var files = this.files;
-	
-	audio.src = URL.createObjectURL(files[0]);
-	audio.load();
-	audio.play();
-	play();
+//Document Onload & File Switch
+{
+	var file = document.getElementById("thefile");
+	var audio = document.getElementById("audio");
+	var fileLabel = document.querySelector("label.file");
+
+	//Starts Scene when loaded
+	document.onload = function(){
+		console.log(e);
+		audio.play();
+		init();
+	}
+	//Resets scene whenever a new file is inputed
+	file.onchange = function(){
+		fileLabel.classList.add('normal');
+		audio.classList.add('active');
+		var files = this.files;
+		
+		audio.src = URL.createObjectURL(files[0]);
+		audio.load();
+		audio.play();
+		init();
+	}
 }
 
 //Old Input Game Variables
@@ -346,16 +351,10 @@ function resetGame(){
 }
 }
 
-//Shader Overlay Variables
-var uniforms, composer, shader_material;
-//createScene() Variables
-var scene, camera, fieldOfView, aspectRatio, nearPlane, farPlane, renderer, container, group, group1, group2, HEIGHT, WIDTH, clock;
-//InitializeAudioVariables()
-var context, src, analyser, bufferLength, dataArray;
-//UpdateAudioVariables()
-var lowerHalfArray, upperHalfArray, overallAvg, lowerMax, lowerAvg, upperMax, upperAvg, lowerMaxFr, lowerAvgFr, upperMaxFr, upperAvgFr;
-//Scene, Light, Shader & Audio Creation
+//Scene, Light, Shader & Audio Initialization
 {
+	//createScene() Variables
+	var scene, camera, fieldOfView, aspectRatio, nearPlane, farPlane, renderer, container, group, group1, group2, HEIGHT, WIDTH, clock;
 	function createScene(){
 		HEIGHT = window.innerHeight;
 		WIDTH = window.innerWidth;
@@ -385,29 +384,14 @@ var lowerHalfArray, upperHalfArray, overallAvg, lowerMax, lowerAvg, upperMax, up
 		renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
 		renderer.setSize(WIDTH, HEIGHT);
 		renderer.shadowMap.enabled = true;
-		
-		//composer = new EffectComposer(renderer);
-		//composer.addPass(new RenderPass(scene, camera));
 
 		container = document.getElementById('out').appendChild(renderer.domElement);
-		window.addEventListener('resize', onWindowResize, false);
 	}
 
-	//Adds Lights
-	var ambientLight, spotLight;
-	function addLights(){
-		ambientLight = new THREE.AmbientLight(0xaaaaaa);
-		spotLight = new THREE.SpotLight(0xffffff);
-		spotLight.intensity = 0.9; //Adjustable Values
-		spotLight.position.set(-10, 40, 20);
-		spotLight.lookAt(ball1);
-		spotLight.castShadow = true;
-		scene.add(ambientLight);
-		scene.add(spotLight);
-	}
-
+	//Shader PostProcessing Variables
+	var uniforms, shader_material, composer;
 	function addShaders(){
-
+		//Uniforms
 		uniforms = {
 			u_time : {
 				type : "f",
@@ -436,20 +420,34 @@ var lowerHalfArray, upperHalfArray, overallAvg, lowerMax, lowerAvg, upperMax, up
 		// Create the shader material
 		shader_material = new THREE.ShaderMaterial({
 			uniforms : uniforms,
-			vertexShader : document.getElementById("vertexShader"),
-			fragmentShader : document.getElementById("fragmentShader")
+			vertexShader : document.getElementById("tvstatic_vertexShader"),
+			fragmentShader : document.getElementById("tvstatic_fragmentShader")
 		});
 
-		// Initialize the effect composer
-		composer = new EffectComposer(renderer);
-		composer.addPass(new RenderPass(scene, camera));
-
-		// Add the post-processing effect
-		var effect = new THREE.ShaderPass(shader_material, "u_texture");
-		effect.renderToScreen = true;
-		composer.addPass(effect);
+		////UNCAUGHT REFERENCE ERROR: EFFECTCOMPOSER IS NOT DEFINED???
+		//this.composer = new EffectComposer(this.renderer);
+		//this.composer.addPass(new RenderPass(this.scene, this.camera));
+		//// Add the post-processing effect
+		//var effect = new ShaderPass(shader_material, "u_texture");
+		//effect.renderToScreen = true;
+		//composer.addPass(effect);
 	}
 
+	//Adds Lights
+	var ambientLight, spotLight;
+	function addLights(){
+		ambientLight = new THREE.AmbientLight(0xaaaaaa);
+		spotLight = new THREE.SpotLight(0xffffff);
+		spotLight.intensity = 0.9; //Adjustable Values
+		spotLight.position.set(-10, 40, 20);
+		spotLight.lookAt(ball1);
+		spotLight.castShadow = true;
+		scene.add(ambientLight);
+		scene.add(spotLight);
+	}
+
+	//InitializeAudioVariables()
+	var context, src, analyser, bufferLength, dataArray;
 	//Initializing Audio Management Variables
 	function initializeAudioVariables(){
 			//AudioContext() is a linked list of Audio nodes that contains audio data
@@ -468,6 +466,164 @@ var lowerHalfArray, upperHalfArray, overallAvg, lowerMax, lowerAvg, upperMax, up
 			bufferLength = analyser.frequencyBinCount;
 			//standard 8-bit integers, holds the values of bufferLength for future use
 			dataArray = new Uint8Array(bufferLength);
+	}
+}
+
+//Frame Update Functions
+{
+	//Updates Input Audio Data & seperates Frequency Data into usable frequency bands
+	var lowerHalfArray, upperHalfArray, overallAvg, lowerMax, lowerAvg, 
+	upperMax, upperAvg, lowerMaxFr, lowerAvgFr, upperMaxFr, upperAvgFr;
+	function updateAudioVariables(){
+		//Gets Byte Frequency from audio data array
+		analyser.getByteFrequencyData(dataArray);
+		//Seperates into Lower & Upper halves of the audio frequencies into seperate arrays
+		this.lowerHalfArray = dataArray.slice(0, (dataArray.length/2) - 1);
+		this.upperHalfArray = dataArray.slice((dataArray.length/2) - 1, dataArray.length - 1);
+		//Overall Average of Audio Frequency
+		this.overallAvg = avg(dataArray);
+		//Max and Average of the lower half of Array
+		this.lowerMax = max(lowerHalfArray);
+		this.lowerAvg = avg(lowerHalfArray);
+		//Max and Average of the upper half of Array
+		this.upperMax = max(upperHalfArray);
+		this.upperAvg = avg(upperHalfArray);
+		//Parses Array input into usable frequency data
+		this.lowerMaxFr = lowerMax / lowerHalfArray.length;
+		this.lowerAvgFr = lowerAvg / lowerHalfArray.length;
+		this.upperMaxFr = upperMax / upperHalfArray.length;
+		this.upperAvgFr = upperAvg / upperHalfArray.length;
+	}
+
+	//Moves Input Mesh Up & Down using input frequencies
+	function updateMesh(mesh, distortionFr){
+		var targetY = normalize(distortionFr,-.75,.75,25, 150);
+		var targetX = normalize(distortionFr,-.75,.75,-100, 100);
+		mesh.position.y += (targetY-mesh.position.y)*0.1;
+		mesh.rotation.z = (targetY-mesh.position.y)*0.0128;
+		mesh.rotation.x = (mesh.position.y-targetY)*0.0064;
+		//mousePos.y
+		//mousePos.x
+	}
+
+	//Adjusts CameraFOV using input frequencies
+	function updateCameraFov(distortionFr){
+		camera.fov = normalize(distortionFr,-1,1,50, 70);
+		camera.updateProjectionMatrix();
+		//mousePos.x
+	}
+
+	//distorts the ball mesh with bass and treble data from audio file
+	var noise = new SimplexNoise();
+	function distortBall(mesh, bassFr, treFr) {
+				//calculates new locations for every verticie in the mesh
+				mesh.geometry.vertices.forEach(function (vertex, i) {
+					vertex.normalize();
+					var offset = mesh.geometry.parameters.radius;
+					//Base Amplifier value
+					var sphere_amp = 10; //Adjustable value//
+					//returns the number of milliseconds since 1st jan 1970, for extra random noise
+					var time = Date.now();
+					var rf = 0.00001;
+					//calculating new vert distance from base mesh using Simplex Noise, randomized Time values and input Music Frequencies
+					var distance = (offset + bassFr ) + noise.noise3D(vertex.x + time *rf*7, vertex.y +  time*rf*8, vertex.z + time*rf*9) * sphere_amp * treFr;
+					vertex.multiplyScalar(distance);
+				});
+				//just updates the object's verticies and faces
+				mesh.geometry.verticesNeedUpdate = true;
+				mesh.geometry.normalsNeedUpdate = true;
+				mesh.geometry.computeVertexNormals();
+				mesh.geometry.computeFaceNormals();
+	}
+
+	//Distorts the mesh using input frequency
+	function distortMesh(mesh, distortionFr) {
+				//ForEach function to iterate through every vertext in the mesh
+				mesh.geometry.vertices.forEach(function (vertex, i) {
+					//Adjustable base Amplifier value
+					var floor_amp = 20;
+					//returns the number of milliseconds since 1st jan 1970, for extra random noise
+					var time = Date.now();
+					//calculating new vert distance from base mesh using Simplex Noise, randomized Time values and input Music Frequencies
+					var distance = (noise.noise2D(vertex.x + time * 0.0003, vertex.y + time * 0.0001) + 0) * distortionFr * floor_amp;
+					vertex.z = distance;
+				});
+				//just updates the object's verticies and faces
+				mesh.geometry.verticesNeedUpdate = true;
+				mesh.geometry.normalsNeedUpdate = true;
+				mesh.geometry.computeVertexNormals();
+				mesh.geometry.computeFaceNormals();
+	}
+
+	//Animate Calls Render ever Frame
+	function animate(){
+		requestAnimationFrame(animate);
+		render();
+	}
+	//Render Updates Animatons Every Frame
+	function render() {
+		updateAudioVariables();
+	
+		//Adds Mesh Distortion
+		{
+			distortMesh(planeArr[0], modulate(upperAvgFr, 0, 1, 0.5, 4));
+			distortBall(ball1, modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8), modulate(upperAvgFr, 0, 1, 0, 4));
+			distortBall(ball2, modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8), modulate(upperAvgFr, 0, 1, 0, 4));
+		}
+	
+		//Adds Rotation Values
+		{
+			var ballRotSpd = (overallAvg/10500) //Adjustable Value//
+			//var ballRotSpd = 0.005;
+			ball1.rotation.x += ballRotSpd;
+			ball1.rotation.y += ballRotSpd;
+			ball1.rotation.z += ballRotSpd;
+			ball2.rotation.x += ballRotSpd;
+			ball2.rotation.y += ballRotSpd;
+			ball2.rotation.z += ballRotSpd;
+
+			cube1.rotation.y += ballRotSpd;
+			cube2.rotation.y += ballRotSpd;
+			cube3.rotation.y += ballRotSpd;
+			cube4.rotation.y += ballRotSpd;
+			cube5.rotation.y += ballRotSpd;
+
+			cube1.rotation.x += ballRotSpd;
+			cube2.rotation.x += ballRotSpd;
+			cube3.rotation.x += ballRotSpd;
+			cube4.rotation.x += ballRotSpd;
+			cube5.rotation.x += ballRotSpd;
+			
+			cube1.rotation.z += ballRotSpd;
+			cube2.rotation.z += ballRotSpd;
+			cube3.rotation.z += ballRotSpd;
+			cube4.rotation.z += ballRotSpd;
+			cube5.rotation.z += ballRotSpd;
+	
+			//group1
+			//group1.rotation.z += ballRotSpd/2;
+			
+			group.rotation.z += ballRotSpd/2;
+			group2.rotation.z += -ballRotSpd/2;
+		}
+
+		//Adds Positional Values
+		{
+			updateMesh(cube1, lowerMaxFr);
+			updateMesh(cube2, lowerAvgFr);
+			updateMesh(cube3, overallAvg/150);
+			updateMesh(cube4, upperMaxFr);
+			updateMesh(cube5, upperAvgFr);
+		}
+
+		updateCameraFov(overallAvg/150);
+
+		//uniforms.u_time.value = clock.getElapsedTime();
+		//uniforms.u_frame.value += 1.0;
+
+		//composer.render();
+		renderer.render(scene, camera);
+		
 	}
 }
 
@@ -506,90 +662,6 @@ var lowerHalfArray, upperHalfArray, overallAvg, lowerMax, lowerAvg, upperMax, up
 	}
 }
 
-//FrameUpdateFunctions.
-{
-	//Updates Input Audio Data & seperates Frequency Data into usable frequency bands
-	function updateAudioVariables(){
-		//Gets Byte Frequency from audio data array
-		analyser.getByteFrequencyData(dataArray);
-		//Seperates into Lower & Upper halves of the audio frequencies into seperate arrays
-		this.lowerHalfArray = dataArray.slice(0, (dataArray.length/2) - 1);
-		this.upperHalfArray = dataArray.slice((dataArray.length/2) - 1, dataArray.length - 1);
-		//Overall Average of Audio Frequency
-		this.overallAvg = avg(dataArray);
-		//Max and Average of the lower half of Array
-		this.lowerMax = max(lowerHalfArray);
-		this.lowerAvg = avg(lowerHalfArray);
-		//Max and Average of the upper half of Array
-		this.upperMax = max(upperHalfArray);
-		this.upperAvg = avg(upperHalfArray);
-		//Parses Array input into usable frequency data
-		this.lowerMaxFr = lowerMax / lowerHalfArray.length;
-		this.lowerAvgFr = lowerAvg / lowerHalfArray.length;
-		this.upperMaxFr = upperMax / upperHalfArray.length;
-		this.upperAvgFr = upperAvg / upperHalfArray.length;
-	}
-
-	//Moves Input Mesh upp & Down by input amount
-	function updateMesh(mesh, amount){
-		var targetY = normalize(amount,-.75,.75,25, 150);
-		var targetX = normalize(amount,-.75,.75,-100, 100);
-		mesh.position.y += (targetY-mesh.position.y)*0.1;
-		mesh.rotation.z = (targetY-mesh.position.y)*0.0128;
-		mesh.rotation.x = (mesh.position.y-targetY)*0.0064;
-		//mousePos.y
-		//mousePos.x
-	}
-
-	//Moves CameraFOV by input amount
-	function updateCameraFov(amount){
-		camera.fov = normalize(amount,-1,1,50, 70);
-		camera.updateProjectionMatrix();
-		//mousePos.x
-	}
-
-	//distorts the ball mesh with bass and treble data from audio file
-	function distortBall(mesh, bassFr, treFr) {
-				//calculates new locations for every verticie in the mesh
-				mesh.geometry.vertices.forEach(function (vertex, i) {
-					vertex.normalize();
-					var offset = mesh.geometry.parameters.radius;
-					//Base Amplifier value
-					var sphere_amp = 10; //Adjustable value//
-					//returns the number of milliseconds since 1st jan 1970, for extra random noise
-					var time = Date.now();
-					var rf = 0.00001;
-					//calculating new vert distance from base mesh using Simplex Noise, randomized Time values and input Music Frequencies
-					var distance = (offset + bassFr ) + noise.noise3D(vertex.x + time *rf*7, vertex.y +  time*rf*8, vertex.z + time*rf*9) * sphere_amp * treFr;
-					vertex.multiplyScalar(distance);
-				});
-				//just updates the object's verticies and faces
-				mesh.geometry.verticesNeedUpdate = true;
-				mesh.geometry.normalsNeedUpdate = true;
-				mesh.geometry.computeVertexNormals();
-				mesh.geometry.computeFaceNormals();
-	}
-
-	//Distorts the planes using input frequency
-	function distortPlane(mesh, distortionFr) {
-				//ForEach function to iterate through every vertext in the mesh
-				mesh.geometry.vertices.forEach(function (vertex, i) {
-					//Adjustable base Amplifier value
-					var floor_amp = 20;
-					//returns the number of milliseconds since 1st jan 1970, for extra random noise
-					var time = Date.now();
-					//calculating new vert distance from base mesh using Simplex Noise, randomized Time values and input Music Frequencies
-					var distance = (noise.noise2D(vertex.x + time * 0.0003, vertex.y + time * 0.0001) + 0) * distortionFr * floor_amp;
-					vertex.z = distance;
-				});
-				//just updates the object's verticies and faces
-				mesh.geometry.verticesNeedUpdate = true;
-				mesh.geometry.normalsNeedUpdate = true;
-				mesh.geometry.computeVertexNormals();
-				mesh.geometry.computeFaceNormals();
-	}
-}
-
 //Misc Calculation Functions
 {
 	//Returns fraction of (val/minval) / (minVal/MaxVal) 
@@ -621,249 +693,190 @@ var lowerHalfArray, upperHalfArray, overallAvg, lowerMax, lowerAvg, upperMax, up
 	}
 }
 
-//EarlyTestFunction
-function AddCubeArrayOld(){
+//ADD Objects To Scene
+{
+	//EarlyTestFunction
+	function AddCubeArrayOld(){
 
-	var cubeGeometry = new THREE.BoxGeometry(20,10,1000, 1, 1, 50);
-	var cubeMaterial = new THREE.MeshBasicMaterial({
-		color: new THREE.Color(1, 0, 0),
-		wireframe: true
-	});
+		var cubeGeometry = new THREE.BoxGeometry(20,10,1000, 1, 1, 50);
+		var cubeMaterial = new THREE.MeshBasicMaterial({
+			color: new THREE.Color(1, 0, 0),
+			wireframe: true
+		});
 
-	var cube = [];
-	var n=30;
-	for(i = 0; i<n; i++){
-		var rot2 = new THREE.Matrix4();
-		var rot = new THREE.Matrix4();
-		var tra = new THREE.Matrix4();
-		var combined = new THREE.Matrix4();
+		var cube = [];
+		var n=30;
+		for(i = 0; i<n; i++){
+			var rot2 = new THREE.Matrix4();
+			var rot = new THREE.Matrix4();
+			var tra = new THREE.Matrix4();
+			var combined = new THREE.Matrix4();
 
-		tra.makeTranslation(0, 100, 0);
-		rot.makeRotationZ(i*(2*Math.PI/n));
+			tra.makeTranslation(0, 100, 0);
+			rot.makeRotationZ(i*(2*Math.PI/n));
 
-		combined.multiply(rot);
-		combined.multiply(tra);
+			combined.multiply(rot);
+			combined.multiply(tra);
 
-		cube[i] = new THREE.Mesh(cubeGeometry, cubeMaterial);
-		cube[i].applyMatrix(combined);
-		scene.add(cube[i]);
-	};
-}
-//Adds Two DistortionBalls
-var ball1, ball2;
-function AddSpheres(){
-	var icosahedronGeometry = new THREE.IcosahedronGeometry(10, 3); //Adjustable Values//
-	var ballMaterial = new THREE.MeshLambertMaterial({
-		color: new THREE.Color("rgb(255, 0, 0)"),
-		//new THREE.Color("rgb(0, 0, 100)"),
-		//0xff00ee,
-		wireframe: true
-	});
-	ball1 = new THREE.Mesh(icosahedronGeometry, ballMaterial);
-	ball2 = new THREE.Mesh(icosahedronGeometry, ballMaterial);
-	ball1.position.y = 105;
-	ball1.position.x = 100;
+			cube[i] = new THREE.Mesh(cubeGeometry, cubeMaterial);
+			cube[i].applyMatrix(combined);
+			scene.add(cube[i]);
+		};
+	}
+	//Adds Two DistortionBalls
+	var ball1, ball2;
+	function AddSpheres(){
+		var icosahedronGeometry = new THREE.IcosahedronGeometry(10, 3); //Adjustable Values//
+		var ballMaterial = new THREE.MeshLambertMaterial({
+			color: new THREE.Color("rgb(255, 0, 0)"),
+			//new THREE.Color("rgb(0, 0, 100)"),
+			//0xff00ee,
+			wireframe: true
+		});
+		ball1 = new THREE.Mesh(icosahedronGeometry, ballMaterial);
+		ball2 = new THREE.Mesh(icosahedronGeometry, ballMaterial);
+		ball1.position.y = 105;
+		ball1.position.x = 100;
 
-	ball2.position.y = 105;
-	ball2.position.x = -100;
-	group1.add(ball1);
-	group1.add(ball2);
-	scene.add(group1);
-}
-
-//Adds the 5 Cubes
-var cube1, cube2, cube3, cube4, cube5;
-function AddCubes(){
-	var cubeGeometry = new THREE.BoxGeometry(20,20,20,1,1,1);
-	var cubeMat = new THREE.MeshLambertMaterial({
-		color: 0xff00ee,
-		//new THREE.Color("rgb(0, 0, 100)"),
-		//0xff00ee,
-		wireframe: true
-	});
-	cube1 = new THREE.Mesh(cubeGeometry, cubeMat);
-	cube2 = new THREE.Mesh(cubeGeometry, cubeMat);
-	cube3 = new THREE.Mesh(cubeGeometry, cubeMat);
-	cube4 = new THREE.Mesh(cubeGeometry, cubeMat);
-	cube5 = new THREE.Mesh(cubeGeometry, cubeMat);
-	cube1.position.y = 100;
-	cube2.position.y = 100;
-	cube3.position.y = 100;
-	cube4.position.y = 100;
-	cube5.position.y = 100;
-
-	cube1.position.x = -70;
-	cube2.position.x = -35;
-	cube3.position.x = 0;
-	cube4.position.x = 35;
-	cube5.position.x = 70;
-	
-	scene.add(cube1);
-	scene.add(cube2);
-	scene.add(cube3);
-	scene.add(cube4);
-	scene.add(cube5);
-}
-
-//Early attempt at adding a player model for game
-var playerLoader, playerMesh, scaleFactIn;
-function AddPlayerModel(){
-	playerLoader = new THREE.PLYLoader();
-	scaleFactIn = 5.0;
-	playerLoader.load('models/small_fighter.ply', function(geometry){
-		geometry.computeVertexNormals();
-		geometry.computeBoundingBox
-	});
-}
-
-function animate(){
-	requestAnimationFrame(animate);
-}
-
-	function play(event) {
-
-		initializeAudioVariables();
-		createScene();
-		//Add Plane Geometry (Outside border Planes use same concept as lab week3 mobius strip)
-		{
-
-			//var 
-			function addPlanes(){
-
-			}
-			var planeGeometry = new THREE.PlaneGeometry(315, 1500, 20, 50);
-			var planeMaterial = new THREE.MeshLambertMaterial({
-				color: 0x68228b, //Adjustable Values
-				//new THREE.Color("rgb(100, 0, 0)"),
-				//0x68228b
-				side: THREE.DoubleSide,
-				wireframe: true
-			});
-			//Established Plane Array, fundamentally similar to Workshop Lectures
-			var n=40;
-			var planeArr = [n];
-			
-			function getPlanes(num){
-				for(i = 0; i<n; i++){
-					var rot = new THREE.Matrix4();
-					var rot2 = new THREE.Matrix4();
-					var tra = new THREE.Matrix4();
-					var combined = new THREE.Matrix4();
-
-					rot2.makeRotationX(-0.5 * Math.PI);
-					rot.makeRotationZ(i*(2*Math.PI/n));
-					tra.makeTranslation(0,2000,0);
-
-					combined.multiply(rot);
-					combined.multiply(tra);
-					combined.multiply(rot2);
-
-					planeArr[i] = new THREE.Mesh(planeGeometry, planeMaterial);
-					
-					planeArr[i].applyMatrix(combined);
-				}
-				return planeArr[num];
-			};
-
-			var bgplaneGeometry = new THREE.PlaneGeometry(1500, 1500, 50, 50);
-			var bgplaneMat =  new THREE.MeshLambertMaterial({
-				color: "rgb(100, 0, 0)", //Adjustable Values
-				//new THREE.Color("rgb(100, 0, 0)"),
-				//0x68228b
-				side: THREE.DoubleSide,
-				wireframe: false
-			});
-
-			var backgroundPlane = new THREE.Mesh(bgplaneGeometry, bgplaneMat);
-			backgroundPlane.position.y = 105;
-			backgroundPlane.position.z = -1000
-
-			//scene.add(backgroundPlane);
-
-			group.add(getPlanes(0));
-			for(i = 1; i<n; i++){
-				group.add(planeArr[i]);
-			}
-
-			group2.add(getPlanes(0));
-			for(i = 1; i<n; i++){
-				group2.add(planeArr[i]);
-			}
-			group.position.y = -2000;
-			group2.position.y = 2250;
-			group2.position.z = -400;
-			group.position.z = -400;
-			scene.add(group);
-			scene.add(group2);
-		
-		}
-		AddSpheres();
-		AddCubes();
-		addLights();
-
-		
-		animate();
-
-		render();
-		//renderer.render(scene, camera);
-		
-		function render() {
-			updateAudioVariables();
-			updateMesh(cube1, lowerMaxFr);
-			updateMesh(cube2, lowerAvgFr);
-			updateMesh(cube3, overallAvg/150);
-			updateMesh(cube4, upperMaxFr);
-			updateMesh(cube5, upperAvgFr);
-
-			updateCameraFov(overallAvg/150);
-		
-			//Adds Mesh Distortion
-			{
-				distortPlane(getPlanes(0), modulate(upperAvgFr, 0, 1, 0.5, 4));
-				distortBall(ball1, modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8), modulate(upperAvgFr, 0, 1, 0, 4));
-				distortBall(ball2, modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8), modulate(upperAvgFr, 0, 1, 0, 4));
-			}
-		
-			//Adds Rotation Values
-			{
-				var ballRotSpd = (overallAvg/10500) //Adjustable Value//
-				//var ballRotSpd = 0.005;
-				ball1.rotation.x += ballRotSpd;
-				ball1.rotation.y += ballRotSpd;
-				ball1.rotation.z += ballRotSpd;
-				ball2.rotation.x += ballRotSpd;
-				ball2.rotation.y += ballRotSpd;
-				ball2.rotation.z += ballRotSpd;
-
-				//group1
-				//group1.rotation.z += ballRotSpd/2;
-				
-				group.rotation.z += ballRotSpd/2;
-				group2.rotation.z += -ballRotSpd/2;
-			}
-
-			//uniforms.u_time.value = clock.getElapsedTime();
-			//uniforms.u_frame.value += 1.0;
-			//composer.render();
-		
-			renderer.render(scene, camera);
-			requestAnimationFrame(render);
-			//RAF();
-			
-		}
-		audio.play();
-
+		ball2.position.y = 105;
+		ball2.position.x = -100;
+		group1.add(ball1);
+		group1.add(ball2);
+		scene.add(group1);
 	}
 
-	function _RAF(){
-		requestAnimationFrame(() => {
-			renderer.render(scene, camera);
-			this._RAF();
+	//Adds the 5 Cubes
+	var cube1, cube2, cube3, cube4, cube5;
+	function AddCubes(){
+		//BoxGeometry(20,20,20,1,1,1);
+		//TorusKnotGeometry( 10, 3, 16, 4 );
+		var cubeGeometry = new THREE.BoxGeometry(20,20,20,1,1,1);
+		var cubeMat = new THREE.MeshLambertMaterial({
+			color: 0xff00ee,
+			//new THREE.Color("rgb(0, 0, 100)"),
+			//0xff00ee,
+			wireframe: true
+		});
+		cube1 = new THREE.Mesh(cubeGeometry, cubeMat);
+		cube2 = new THREE.Mesh(cubeGeometry, cubeMat);
+		cube3 = new THREE.Mesh(cubeGeometry, cubeMat);
+		cube4 = new THREE.Mesh(cubeGeometry, cubeMat);
+		cube5 = new THREE.Mesh(cubeGeometry, cubeMat);
+		cube1.position.y = 100;
+		cube2.position.y = 100;
+		cube3.position.y = 100;
+		cube4.position.y = 100;
+		cube5.position.y = 100;
+
+		cube1.position.x = -70;
+		cube2.position.x = -35;
+		cube3.position.x = 0;
+		cube4.position.x = 35;
+		cube5.position.x = 70;
+		
+		scene.add(cube1);
+		scene.add(cube2);
+		scene.add(cube3);
+		scene.add(cube4);
+		scene.add(cube5);
+	}
+
+	var planeArr;
+	function addPlanes(){
+		var planeGeometry = new THREE.PlaneGeometry(315, 1500, 20, 50);
+		var planeMaterial = new THREE.MeshLambertMaterial({
+			color: 0x68228b, //Adjustable Values
+			//new THREE.Color("rgb(100, 0, 0)"),
+			//0x68228b
+			side: THREE.DoubleSide,
+			wireframe: true
+		});
+		//Established Plane Array, fundamentally similar to Workshop Lectures
+		var n=40;
+		planeArr = [n];
+		
+		function getPlanes(num){
+			for(i = 0; i<n; i++){
+				var rot = new THREE.Matrix4();
+				var rot2 = new THREE.Matrix4();
+				var tra = new THREE.Matrix4();
+				var combined = new THREE.Matrix4();
+
+				rot2.makeRotationX(-0.5 * Math.PI);
+				rot.makeRotationZ(i*(2*Math.PI/n));
+				tra.makeTranslation(0,2000,0);
+
+				combined.multiply(rot);
+				combined.multiply(tra);
+				combined.multiply(rot2);
+
+				planeArr[i] = new THREE.Mesh(planeGeometry, planeMaterial);
+				
+				planeArr[i].applyMatrix(combined);
+			}
+			return planeArr[num];
+		};
+
+		var bgplaneGeometry = new THREE.PlaneGeometry(1500, 1500, 50, 50);
+		var bgplaneMat =  new THREE.MeshLambertMaterial({
+			color: "rgb(100, 0, 0)", //Adjustable Values
+			//new THREE.Color("rgb(100, 0, 0)"),
+			//0x68228b
+			side: THREE.DoubleSide,
+			wireframe: false
+		});
+
+		var backgroundPlane = new THREE.Mesh(bgplaneGeometry, bgplaneMat);
+		backgroundPlane.position.y = 105;
+		backgroundPlane.position.z = -1000
+
+		//scene.add(backgroundPlane);
+
+		group.add(getPlanes(0));
+		for(i = 1; i<n; i++){
+			group.add(planeArr[i]);
+		}
+
+		group2.add(getPlanes(0));
+		for(i = 1; i<n; i++){
+			group2.add(planeArr[i]);
+		}
+		group.position.y = -2000;
+		group2.position.y = 2250;
+		group2.position.z = -400;
+		group.position.z = -400;
+		scene.add(group);
+		scene.add(group2);
+	}
+
+	//Early attempt at adding a player model for game
+	var playerLoader, playerMesh, scaleFactIn;
+	function AddPlayerModel(){
+		playerLoader = new THREE.PLYLoader();
+		scaleFactIn = 5.0;
+		playerLoader.load('models/small_fighter.ply', function(geometry){
+			geometry.computeVertexNormals();
+			geometry.computeBoundingBox
 		});
 	}
-window.addEventListener('load', play, false);
-window.addEventListener('resize', onWindowResize, false);
-document.getElementById('out').appendChild(renderer.domElement);
+}
 
-document.addEventListener('mousemove', handleMouseMove, false);
-document.addEventListener('mouseup', handleMouseUp, false);
+function init(event) {
+	initializeAudioVariables();
+	createScene();
+	addShaders();
+	addPlanes();
+	AddSpheres();
+	AddCubes();
+	addLights();
+	animate();
+	audio.play();
+}
+
+//Window Event Listeners
+{
+	window.addEventListener('load', init, false);
+	window.addEventListener('resize', onWindowResize, false);
+	document.addEventListener('mousemove', handleMouseMove, false);
+	document.addEventListener('mouseup', handleMouseUp, false);
+}

@@ -41,7 +41,7 @@
 -->
 
 
-<script type="x-shader/x-vertex" id="vertexShader">
+<script type="x-shader/x-vertex" id="tvstatic_vertexShader">
 	#define GLSLIFY 1
 	// Texture varyings
 	varying vec2 v_uv;
@@ -58,7 +58,7 @@
 	}
 </script>
 
-<script type="x-shader/x-fragment" id="fragmentShader">
+<script type="x-shader/x-fragment" id="tvstatic_fragmentShader">
 #define GLSLIFY 1
 //Common uniforms
 uniform vec2 u_resolution;
@@ -72,37 +72,18 @@ uniform sampler2D u_texture;
 // Texture varyings
 varying vec2 v_uv;
 
-/*
- * Random number generator with a float seed
- *
- * Credits:
- * http://byteblacksmith.com/improvements-to-the-canonical-one-liner-glsl-rand-for-opengl-es-2-0
- */
 highp float random1d(float dt) {
     highp float c = 43758.5453;
     highp float sn = mod(dt, 3.14);
     return fract(sin(sn) * c);
 }
 
-/*
- * Pseudo-noise generator
- *
- * Credits:
- * https://thebookofshaders.com/11/
- */
 highp float noise1d(float value) {
 	highp float i = floor(value);
 	highp float f = fract(value);
 	return mix(random1d(i), random1d(i + 1.0), smoothstep(0.0, 1.0, f));
 }
 
-/*
- * Random number generator with a vec2 seed
- *
- * Credits:
- * http://byteblacksmith.com/improvements-to-the-canonical-one-liner-glsl-rand-for-opengl-es-2-0
- * https://github.com/mattdesl/glsl-random
- */
 highp float random2d(vec2 co) {
     highp float a = 12.9898;
     highp float b = 78.233;
@@ -112,9 +93,6 @@ highp float random2d(vec2 co) {
     return fract(sin(sn) * c);
 }
 
-/*
- * The main program
- */
 void main() {
 	// Calculate the effect relative strength
 	float strength = (0.3 + 0.7 * noise1d(0.3 * u_time)) * u_mouse.x / u_resolution.x;
@@ -139,49 +117,71 @@ void main() {
 </script>
 
 <!--
-<script type="x-shader/x-vertex" id="vertexShader">
+<script type="x-shader/x-vertex" id="rgbshift_vertexShader">
 
+	#define GLSLIFY 1
+	// Texture varyings
 	varying vec2 v_uv;
-	
+
+	/*
+	* The main program
+	*/
 	void main() {
+		// Calculate the varyings
 		v_uv = uv;
-	
+
+		// Vertex shader output
 		gl_Position = vec4(position, 1.0);
 	}
 </script>
 
-<script type="x-shader/x-fragment" id="fragmentShader">
-
+<script type="x-shader/x-fragment" id="rgbshift_fragmentShader">
+	#define GLSLIFY 1
+	// Common uniforms
 	uniform vec2 u_resolution;
 	uniform vec2 u_mouse;
 	uniform float u_time;
 	uniform float u_frame;
-	
+
+	// Texture uniforms
 	uniform sampler2D u_texture;
-	
+
+	// Texture varyings
 	varying vec2 v_uv;
-	
+
+	/*
+	* The main program
+	*/
 	void main() {
+		// Calculate the color offset directions
 		float angle = u_time;
 		vec2 red_offset = vec2(cos(angle), sin(angle));
 		angle += radians(120.0);
 		vec2 green_offset = vec2(cos(angle), sin(angle));
 		angle += radians(120.0);
 		vec2 blue_offset = vec2(cos(angle), sin(angle));
-	
+
+		// Calculate the offset size as a function of the pixel distance to the center
 		float offset_size = 0.1 * length(gl_FragCoord.xy - 0.5 * u_resolution);
-	
+
+		// Scale the offset size by the relative mouse position
 		offset_size *= u_mouse.x / u_resolution.x;
-	
+
+		// Extract the pixel color values from the input texture
 		float red = texture2D(u_texture, v_uv - offset_size * red_offset / u_resolution).r;
 		float green = texture2D(u_texture, v_uv - offset_size * green_offset / u_resolution).g;
 		float blue = texture2D(u_texture, v_uv - offset_size * blue_offset / u_resolution).b;
-	
+
+		// Fragment shader output
 		gl_FragColor = vec4(red, green, blue, 1.0);
 	}
 </script>
-
 -->
+
+
+
+
+
 
 
 </body>
