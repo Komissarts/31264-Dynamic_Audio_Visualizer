@@ -1,6 +1,8 @@
 //IMPORT SPACESHIP MODEL FOR CRAFT
 //CLEAN UP CODE LMAO
 //Add GUI - Adjustable volumne, colours, lighting, mesh distortion intensity ect.
+//import {EffectComposer} from 'js/EffectComposer.js';
+//import {RenderPass} from 'js/RenderPass.js';
 
 var noise = new SimplexNoise();
 var file = document.getElementById("thefile");
@@ -24,6 +26,7 @@ file.onchange = function(){
 	play();
 }
 
+//Old Input Game Variables
 {
 // GAME VARIABLES
 var game;
@@ -34,210 +37,19 @@ var ennemiesPool = [];
 var particlesPool = [];
 var particlesInUse = [];
 
-function resetGame(){
-  game = {speed:0,
-          initSpeed:.00035,
-          baseSpeed:.00035,
-          targetBaseSpeed:.00035,
-          incrementSpeedByTime:.0000025,
-          incrementSpeedByLevel:.000005,
-          distanceForSpeedUpdate:100,
-          speedLastUpdate:0,
 
-          distance:0,
-          ratioSpeedDistance:50,
-          energy:100,
-          ratioSpeedEnergy:3,
-
-          level:1,
-          levelLastUpdate:0,
-          distanceForLevelUpdate:1000,
-
-          planeDefaultHeight:100,
-          planeAmpHeight:80,
-          planeAmpWidth:75,
-          planeMoveSensivity:0.005,
-          planeRotXSensivity:0.0008,
-          planeRotZSensivity:0.0004,
-          planeFallSpeed:.001,
-          planeMinSpeed:1.2,
-          planeMaxSpeed:1.6,
-          planeSpeed:0,
-          planeCollisionDisplacementX:0,
-          planeCollisionSpeedX:0,
-
-          planeCollisionDisplacementY:0,
-          planeCollisionSpeedY:0,
-
-          seaRadius:600,
-          seaLength:800,
-          //seaRotationSpeed:0.006,
-          wavesMinAmp : 5,
-          wavesMaxAmp : 20,
-          wavesMinSpeed : 0.001,
-          wavesMaxSpeed : 0.003,
-
-          cameraFarPos:500,
-          cameraNearPos:150,
-          cameraSensivity:0.002,
-
-          coinDistanceTolerance:15,
-          coinValue:3,
-          coinsSpeed:.5,
-          coinLastSpawn:0,
-          distanceForCoinsSpawn:100,
-
-          ennemyDistanceTolerance:10,
-          ennemyValue:10,
-          ennemiesSpeed:.6,
-          ennemyLastSpawn:0,
-          distanceForEnnemiesSpawn:50,
-
-          status : "playing",
-         };
-  fieldLevel.innerHTML = Math.floor(game.level);
-}
-}
-
-//var shaderMaterial
-
-
-//createScene() Variables
-var scene, camera, fieldOfView, aspectRatio, nearPlane, farPlane, renderer, container, group, group1, group2, HEIGHT, WIDTH;
-//InitializeAudioVariables()
-var context, src, analyser, bufferLength, dataArray;
-//UpdateAudioVariables()
-var lowerHalfArray, upperHalfArray, overallAvg, lowerMax, lowerAvg, upperMax, upperAvg, lowerMaxFr, lowerAvgFr, upperMaxFr, upperAvgFr;
-//Scene, Audio, Window & Input Management
-{
-	function createScene(){
-		HEIGHT = window.innerHeight;
-		WIDTH = window.innerWidth;
-		scene = new THREE.Scene();
-
-		aspectRatio = WIDTH / HEIGHT;
-		fieldOfView = 60;
-		nearPlane = 1;
-		farPlane = 10000;
-		camera = new THREE.PerspectiveCamera(
-			fieldOfView,
-			aspectRatio,
-			nearPlane,
-			farPlane
-		);
-		group = new THREE.Group();
-		group1 = new THREE.Group();
-		group2 = new THREE.Group();
-
-		scene.fog = new THREE.Fog("rgb(100, 0, 0)", 100,950);
-		camera.position.x = 0;
-		camera.position.z = 150;
-		camera.position.y = 100;
-
-		renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-		renderer.setSize(WIDTH, HEIGHT);
-		renderer.shadowMap.enabled = true;
-		container = document.getElementById('out').appendChild(renderer.domElement);
-		window.addEventListener('resize', onWindowResize, false);
-	}
-
-	function onWindowResize() {
-		HEIGHT = window.innerHeight;
-		WIDTH = window.innerWidth;
-		renderer.setSize(WIDTH, HEIGHT);
-		camera.aspect = WIDTH / HEIGHT;
-		camera.updateProjectionMatrix();
-	}
-
-	function handleMouseMove(event) {
-		var tx = -1 + (event.clientX / WIDTH)*2;
-		var ty = 1 - (event.clientY / HEIGHT)*2;
-		mousePos = {x:tx, y:ty};
-	}
-		
-	function handleTouchMove(event) {
-		event.preventDefault();
-		var tx = -1 + (event.touches[0].pageX / WIDTH)*2;
-		var ty = 1 - (event.touches[0].pageY / HEIGHT)*2;
-		mousePos = {x:tx, y:ty};
-	}
-		
-	function handleMouseUp(event){
-		if (game.status == "waitingReplay"){
-			resetGame();
-			hideReplay();
-		}
-	}
-		
-	function handleTouchEnd(event){
-		if (game.status == "waitingReplay"){
-			resetGame();
-			hideReplay();
-		}
-	}
-
-	//Initializing Audio Management Variables
-	function initializeAudioVariables(){
-			//AudioContext() is a linked list of Audio nodes that contains audio data
-			context = new AudioContext();
-			//creates an AudioSource node that can be used to manipulate audio data
-			src = context.createMediaElementSource(audio);
-			//creates an Analyser node that allows us to read audio data
-			analyser = context.createAnalyser();
-			//allows rw access to the audio files
-			src.connect(analyser);
-			analyser.connect(context.destination);
-			//sample size used when performing Fourier Transform to get frequency Data
-			analyser.fftSize = 2048;
-			//readonly integer, only half of analyser.fftSize. it is the amoount of data
-			//values availble for any music visualizations
-			bufferLength = analyser.frequencyBinCount;
-			//standard 8-bit integers, holds the values of bufferLength for future use
-			dataArray = new Uint8Array(bufferLength);
-	}
-
-	function updateAudioVariables(){
-		analyser.getByteFrequencyData(dataArray);
-		this.lowerHalfArray = dataArray.slice(0, (dataArray.length/2) - 1);
-		this.upperHalfArray = dataArray.slice((dataArray.length/2) - 1, dataArray.length - 1);
-		this.overallAvg = avg(dataArray);
-		this.lowerMax = max(lowerHalfArray);
-		this.lowerAvg = avg(lowerHalfArray);
-		this.upperMax = max(upperHalfArray);
-		this.upperAvg = avg(upperHalfArray);
-		this.lowerMaxFr = lowerMax / lowerHalfArray.length;
-		this.lowerAvgFr = lowerAvg / lowerHalfArray.length;
-		this.upperMaxFr = upperMax / upperHalfArray.length;
-		this.upperAvgFr = upperAvg / upperHalfArray.length;
+function handleMouseUp(event){
+	if (game.status == "waitingReplay"){
+		resetGame();
+		hideReplay();
 	}
 }
-
-function AddCubes(){
-
-	var cubeGeometry = new THREE.BoxGeometry(20,10,1000, 1, 1, 50);
-	var cubeMaterial = new THREE.MeshBasicMaterial({
-		color: new THREE.Color(1, 0, 0),
-		wireframe: true
-	});
-
-	var cube = [];
-	var n=30;
-	for(i = 0; i<n; i++){
-		var rot2 = new THREE.Matrix4();
-		var rot = new THREE.Matrix4();
-		var tra = new THREE.Matrix4();
-		var combined = new THREE.Matrix4();
-
-		tra.makeTranslation(0, 100, 0);
-		rot.makeRotationZ(i*(2*Math.PI/n));
-
-		combined.multiply(rot);
-		combined.multiply(tra);
-
-		cube[i] = new THREE.Mesh(cubeGeometry, cubeMaterial);
-		cube[i].applyMatrix(combined);
-		scene.add(cube[i]);
-	};
+	
+function handleTouchEnd(event){
+	if (game.status == "waitingReplay"){
+		resetGame();
+		hideReplay();
+	}
 }
 
 // Create & Add Partices, Enemies & Objectives
@@ -469,9 +281,375 @@ function AddCubes(){
 	}
 }
 
-function CreateSpheres(){
+function resetGame(){
+  game = {speed:0,
+          initSpeed:.00035,
+          baseSpeed:.00035,
+          targetBaseSpeed:.00035,
+          incrementSpeedByTime:.0000025,
+          incrementSpeedByLevel:.000005,
+          distanceForSpeedUpdate:100,
+          speedLastUpdate:0,
 
+          distance:0,
+          ratioSpeedDistance:50,
+          energy:100,
+          ratioSpeedEnergy:3,
+
+          level:1,
+          levelLastUpdate:0,
+          distanceForLevelUpdate:1000,
+
+          planeDefaultHeight:100,
+          planeAmpHeight:80,
+          planeAmpWidth:75,
+          planeMoveSensivity:0.005,
+          planeRotXSensivity:0.0008,
+          planeRotZSensivity:0.0004,
+          planeFallSpeed:.001,
+          planeMinSpeed:1.2,
+          planeMaxSpeed:1.6,
+          planeSpeed:0,
+          planeCollisionDisplacementX:0,
+          planeCollisionSpeedX:0,
+
+          planeCollisionDisplacementY:0,
+          planeCollisionSpeedY:0,
+
+          seaRadius:600,
+          seaLength:800,
+          //seaRotationSpeed:0.006,
+          wavesMinAmp : 5,
+          wavesMaxAmp : 20,
+          wavesMinSpeed : 0.001,
+          wavesMaxSpeed : 0.003,
+
+          cameraFarPos:500,
+          cameraNearPos:150,
+          cameraSensivity:0.002,
+
+          coinDistanceTolerance:15,
+          coinValue:3,
+          coinsSpeed:.5,
+          coinLastSpawn:0,
+          distanceForCoinsSpawn:100,
+
+          ennemyDistanceTolerance:10,
+          ennemyValue:10,
+          ennemiesSpeed:.6,
+          ennemyLastSpawn:0,
+          distanceForEnnemiesSpawn:50,
+
+          status : "playing",
+         };
+  fieldLevel.innerHTML = Math.floor(game.level);
 }
+}
+
+//Shader Overlay Variables
+var uniforms, composer, shader_material;
+//createScene() Variables
+var scene, camera, fieldOfView, aspectRatio, nearPlane, farPlane, renderer, container, group, group1, group2, HEIGHT, WIDTH, clock;
+//InitializeAudioVariables()
+var context, src, analyser, bufferLength, dataArray;
+//UpdateAudioVariables()
+var lowerHalfArray, upperHalfArray, overallAvg, lowerMax, lowerAvg, upperMax, upperAvg, lowerMaxFr, lowerAvgFr, upperMaxFr, upperAvgFr;
+//Scene, Light, Shader & Audio Creation
+{
+	function createScene(){
+		HEIGHT = window.innerHeight;
+		WIDTH = window.innerWidth;
+		scene = new THREE.Scene();
+		clock = new THREE.Clock(true);
+		aspectRatio = WIDTH / HEIGHT;
+		fieldOfView = 60;
+		nearPlane = 1;
+		farPlane = 10000;
+		camera = new THREE.PerspectiveCamera(
+			fieldOfView,
+			aspectRatio,
+			nearPlane,
+			farPlane
+		);
+		//ThreeJS Groups for scene management
+		group = new THREE.Group();
+		group1 = new THREE.Group();
+		group2 = new THREE.Group();
+
+		//Fog for Lighting Effects
+		scene.fog = new THREE.Fog("rgb(100, 0, 0)", 100,950);
+		camera.position.x = 0;
+		camera.position.z = 150;
+		camera.position.y = 100;
+
+		renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+		renderer.setSize(WIDTH, HEIGHT);
+		renderer.shadowMap.enabled = true;
+		
+		//composer = new EffectComposer(renderer);
+		//composer.addPass(new RenderPass(scene, camera));
+
+		container = document.getElementById('out').appendChild(renderer.domElement);
+		window.addEventListener('resize', onWindowResize, false);
+	}
+
+	//Adds Lights
+	var ambientLight, spotLight;
+	function addLights(){
+		ambientLight = new THREE.AmbientLight(0xaaaaaa);
+		spotLight = new THREE.SpotLight(0xffffff);
+		spotLight.intensity = 0.9; //Adjustable Values
+		spotLight.position.set(-10, 40, 20);
+		spotLight.lookAt(ball1);
+		spotLight.castShadow = true;
+		scene.add(ambientLight);
+		scene.add(spotLight);
+	}
+
+	function addShaders(){
+
+		uniforms = {
+			u_time : {
+				type : "f",
+				value : 0.0
+			},
+			u_frame : {
+				type : "f",
+				value : 0.0
+			},
+			u_resolution : {
+				type : "v2",
+				value : new THREE.Vector2(window.innerWidth, window.innerHeight)
+						.multiplyScalar(window.devicePixelRatio)
+			},
+			u_mouse : {
+				type : "v2",
+				value : new THREE.Vector2(0.5 * window.innerWidth, window.innerHeight)
+						.multiplyScalar(window.devicePixelRatio)
+			},
+			u_texture : {
+				type : "t",
+				value : null
+			}
+		};
+
+		// Create the shader material
+		shader_material = new THREE.ShaderMaterial({
+			uniforms : uniforms,
+			vertexShader : document.getElementById("vertexShader"),
+			fragmentShader : document.getElementById("fragmentShader")
+		});
+
+		// Initialize the effect composer
+		composer = new EffectComposer(renderer);
+		composer.addPass(new RenderPass(scene, camera));
+
+		// Add the post-processing effect
+		var effect = new THREE.ShaderPass(shader_material, "u_texture");
+		effect.renderToScreen = true;
+		composer.addPass(effect);
+	}
+
+	//Initializing Audio Management Variables
+	function initializeAudioVariables(){
+			//AudioContext() is a linked list of Audio nodes that contains audio data
+			context = new AudioContext();
+			//creates an AudioSource node that can be used to manipulate audio data
+			src = context.createMediaElementSource(audio);
+			//creates an Analyser node that allows us to read audio data
+			analyser = context.createAnalyser();
+			//allows rw access to the audio files
+			src.connect(analyser);
+			analyser.connect(context.destination);
+			//sample size used when performing Fourier Transform to get frequency Data
+			analyser.fftSize = 2048;
+			//readonly integer, only half of analyser.fftSize. it is the amoount of data
+			//values availble for any music visualizations
+			bufferLength = analyser.frequencyBinCount;
+			//standard 8-bit integers, holds the values of bufferLength for future use
+			dataArray = new Uint8Array(bufferLength);
+	}
+}
+
+//Misc Input Checks
+{
+	function onWindowResize() {
+		HEIGHT = window.innerHeight;
+		WIDTH = window.innerWidth;
+		renderer.setSize(WIDTH, HEIGHT);
+		camera.aspect = WIDTH / HEIGHT;
+		camera.updateProjectionMatrix();
+
+		composer.setSize(window.innerWidth, window.innerHeight);
+		uniforms.u_resolution.value.set(window.innerWidth, window.innerHeight).multiplyScalar(window.devicePixelRatio);
+	}
+
+	function handleMouseMove(event) {
+		var tx = -1 + (event.clientX / WIDTH)*2;
+		var ty = 1 - (event.clientY / HEIGHT)*2;
+		mousePos = {x:tx, y:ty};
+
+		//Updates Shader Uniforms on mousemoving
+		uniforms.u_mouse.value.set(event.pageX, window.innerHeight - event.pageY).multiplyScalar(
+			window.devicePixelRatio);
+	}
+		
+	function handleTouchMove(event) {
+		event.preventDefault();
+		var tx = -1 + (event.touches[0].pageX / WIDTH)*2;
+		var ty = 1 - (event.touches[0].pageY / HEIGHT)*2;
+		mousePos = {x:tx, y:ty};
+
+		//Updates Shader Uniforms on mousemoving
+		uniforms.u_mouse.value.set(event.touches[0].pageX, window.innerHeight - event.touches[0].pageY).multiplyScalar(
+			window.devicePixelRatio);
+	}
+}
+
+//FrameUpdateFunctions.
+{
+	//Updates Input Audio Data & seperates Frequency Data into usable frequency bands
+	function updateAudioVariables(){
+		//Gets Byte Frequency from audio data array
+		analyser.getByteFrequencyData(dataArray);
+		//Seperates into Lower & Upper halves of the audio frequencies into seperate arrays
+		this.lowerHalfArray = dataArray.slice(0, (dataArray.length/2) - 1);
+		this.upperHalfArray = dataArray.slice((dataArray.length/2) - 1, dataArray.length - 1);
+		//Overall Average of Audio Frequency
+		this.overallAvg = avg(dataArray);
+		//Max and Average of the lower half of Array
+		this.lowerMax = max(lowerHalfArray);
+		this.lowerAvg = avg(lowerHalfArray);
+		//Max and Average of the upper half of Array
+		this.upperMax = max(upperHalfArray);
+		this.upperAvg = avg(upperHalfArray);
+		//Parses Array input into usable frequency data
+		this.lowerMaxFr = lowerMax / lowerHalfArray.length;
+		this.lowerAvgFr = lowerAvg / lowerHalfArray.length;
+		this.upperMaxFr = upperMax / upperHalfArray.length;
+		this.upperAvgFr = upperAvg / upperHalfArray.length;
+	}
+
+	//Moves Input Mesh upp & Down by input amount
+	function updateMesh(mesh, amount){
+		var targetY = normalize(amount,-.75,.75,25, 150);
+		var targetX = normalize(amount,-.75,.75,-100, 100);
+		mesh.position.y += (targetY-mesh.position.y)*0.1;
+		mesh.rotation.z = (targetY-mesh.position.y)*0.0128;
+		mesh.rotation.x = (mesh.position.y-targetY)*0.0064;
+		//mousePos.y
+		//mousePos.x
+	}
+
+	//Moves CameraFOV by input amount
+	function updateCameraFov(amount){
+		camera.fov = normalize(amount,-1,1,50, 70);
+		camera.updateProjectionMatrix();
+		//mousePos.x
+	}
+
+	//distorts the ball mesh with bass and treble data from audio file
+	function distortBall(mesh, bassFr, treFr) {
+				//calculates new locations for every verticie in the mesh
+				mesh.geometry.vertices.forEach(function (vertex, i) {
+					vertex.normalize();
+					var offset = mesh.geometry.parameters.radius;
+					//Base Amplifier value
+					var sphere_amp = 10; //Adjustable value//
+					//returns the number of milliseconds since 1st jan 1970, for extra random noise
+					var time = Date.now();
+					var rf = 0.00001;
+					//calculating new vert distance from base mesh using Simplex Noise, randomized Time values and input Music Frequencies
+					var distance = (offset + bassFr ) + noise.noise3D(vertex.x + time *rf*7, vertex.y +  time*rf*8, vertex.z + time*rf*9) * sphere_amp * treFr;
+					vertex.multiplyScalar(distance);
+				});
+				//just updates the object's verticies and faces
+				mesh.geometry.verticesNeedUpdate = true;
+				mesh.geometry.normalsNeedUpdate = true;
+				mesh.geometry.computeVertexNormals();
+				mesh.geometry.computeFaceNormals();
+	}
+
+	//Distorts the planes using input frequency
+	function distortPlane(mesh, distortionFr) {
+				//ForEach function to iterate through every vertext in the mesh
+				mesh.geometry.vertices.forEach(function (vertex, i) {
+					//Adjustable base Amplifier value
+					var floor_amp = 20;
+					//returns the number of milliseconds since 1st jan 1970, for extra random noise
+					var time = Date.now();
+					//calculating new vert distance from base mesh using Simplex Noise, randomized Time values and input Music Frequencies
+					var distance = (noise.noise2D(vertex.x + time * 0.0003, vertex.y + time * 0.0001) + 0) * distortionFr * floor_amp;
+					vertex.z = distance;
+				});
+				//just updates the object's verticies and faces
+				mesh.geometry.verticesNeedUpdate = true;
+				mesh.geometry.normalsNeedUpdate = true;
+				mesh.geometry.computeVertexNormals();
+				mesh.geometry.computeFaceNormals();
+	}
+}
+
+//Misc Calculation Functions
+{
+	//Returns fraction of (val/minval) / (minVal/MaxVal) 
+	function fractionate(val, minVal, maxVal) {
+		return (val - minVal)/(maxVal - minVal);
+	}
+	//returns changes in volume and Frequency
+	function modulate(val, minVal, maxVal, outMin, outMax) {
+		var fr = fractionate(val, minVal, maxVal);
+		var delta = outMax - outMin;
+		return outMin + (fr * delta);
+	}
+	//Returns Average of audio frequencies
+	function avg(arr){
+		var total = arr.reduce(function(sum, b) { return sum + b; });
+		return (total / arr.length);
+	}
+	//Returns maximum of each frequency
+	function max(arr){
+		return arr.reduce(function(a, b){ return Math.max(a, b); })
+	}
+	function normalize(v,vmin,vmax,tmin, tmax){
+		var nv = Math.max(Math.min(v,vmax), vmin);
+		var dv = vmax-vmin;
+		var pc = (nv-vmin)/dv;
+		var dt = tmax-tmin;
+		var tv = tmin + (pc*dt);
+		return tv;
+	}
+}
+
+//EarlyTestFunction
+function AddCubeArrayOld(){
+
+	var cubeGeometry = new THREE.BoxGeometry(20,10,1000, 1, 1, 50);
+	var cubeMaterial = new THREE.MeshBasicMaterial({
+		color: new THREE.Color(1, 0, 0),
+		wireframe: true
+	});
+
+	var cube = [];
+	var n=30;
+	for(i = 0; i<n; i++){
+		var rot2 = new THREE.Matrix4();
+		var rot = new THREE.Matrix4();
+		var tra = new THREE.Matrix4();
+		var combined = new THREE.Matrix4();
+
+		tra.makeTranslation(0, 100, 0);
+		rot.makeRotationZ(i*(2*Math.PI/n));
+
+		combined.multiply(rot);
+		combined.multiply(tra);
+
+		cube[i] = new THREE.Mesh(cubeGeometry, cubeMaterial);
+		cube[i].applyMatrix(combined);
+		scene.add(cube[i]);
+	};
+}
+//Adds Two DistortionBalls
 var ball1, ball2;
 function AddSpheres(){
 	var icosahedronGeometry = new THREE.IcosahedronGeometry(10, 3); //Adjustable Values//
@@ -484,14 +662,50 @@ function AddSpheres(){
 	ball1 = new THREE.Mesh(icosahedronGeometry, ballMaterial);
 	ball2 = new THREE.Mesh(icosahedronGeometry, ballMaterial);
 	ball1.position.y = 105;
-	ball1.position.x = 75;
+	ball1.position.x = 100;
+
 	ball2.position.y = 105;
-	ball2.position.x = -75;
+	ball2.position.x = -100;
 	group1.add(ball1);
 	group1.add(ball2);
 	scene.add(group1);
 }
 
+//Adds the 5 Cubes
+var cube1, cube2, cube3, cube4, cube5;
+function AddCubes(){
+	var cubeGeometry = new THREE.BoxGeometry(20,20,20,1,1,1);
+	var cubeMat = new THREE.MeshLambertMaterial({
+		color: 0xff00ee,
+		//new THREE.Color("rgb(0, 0, 100)"),
+		//0xff00ee,
+		wireframe: true
+	});
+	cube1 = new THREE.Mesh(cubeGeometry, cubeMat);
+	cube2 = new THREE.Mesh(cubeGeometry, cubeMat);
+	cube3 = new THREE.Mesh(cubeGeometry, cubeMat);
+	cube4 = new THREE.Mesh(cubeGeometry, cubeMat);
+	cube5 = new THREE.Mesh(cubeGeometry, cubeMat);
+	cube1.position.y = 100;
+	cube2.position.y = 100;
+	cube3.position.y = 100;
+	cube4.position.y = 100;
+	cube5.position.y = 100;
+
+	cube1.position.x = -70;
+	cube2.position.x = -35;
+	cube3.position.x = 0;
+	cube4.position.x = 35;
+	cube5.position.x = 70;
+	
+	scene.add(cube1);
+	scene.add(cube2);
+	scene.add(cube3);
+	scene.add(cube4);
+	scene.add(cube5);
+}
+
+//Early attempt at adding a player model for game
 var playerLoader, playerMesh, scaleFactIn;
 function AddPlayerModel(){
 	playerLoader = new THREE.PLYLoader();
@@ -502,72 +716,21 @@ function AddPlayerModel(){
 	});
 }
 
-
-var clock, stats, controlParameters, mesh, uniforms, composer, shaderMaterial;
-
-function AddShaders(){
-	clock = new THREE.Clock(true);
-	stats = new Stats();
-	stats.dom.style.cssText = "";
-	document.getElementById("sketch-stats").appendChild(stats.dom);
-
-	uniforms = {
-		u_time : {
-			type : "f",
-			value : 0.0
-		},
-		u_frame : {
-			type : "f",
-			value : 0.0
-		},
-		u_resolution : {
-			type : "v2",
-			value : new THREE.Vector2(window.innerWidth, window.innerHeight)
-					.multiplyScalar(window.devicePixelRatio)
-		},
-		u_mouse : {
-			type : "v2",
-			value : new THREE.Vector2(0.5 * window.innerWidth, window.innerHeight)
-					.multiplyScalar(window.devicePixelRatio)
-		},
-		u_texture : {
-			type : "t",
-			value : null
-		}
-	};
-
-	// Create the shader material
-	var shaderMaterial = new THREE.ShaderMaterial({
-		//uniforms : uniforms,
-		vertexShader : document.getElementById("vertexShader").textContent,
-		fragmentShader : document.getElementById("fragmentShader").textContent
-	});
-
-	// Initialize the effect composer
-	composer = new THREE.EffectComposer(renderer);
-	composer.addPass(new THREE.RenderPass(scene, camera));
-
-	// Add the post-processing effect
-	var effect = new THREE.ShaderPass(material, "u_texture");
-	effect.renderToScreen = true;
-	composer.addPass(effect);
+function animate(){
+	requestAnimationFrame(animate);
 }
 
 	function play(event) {
 
-		fieldDistance = document.getElementById("distValue");
-		energyBar = document.getElementById("energyBar");
-		replayMessage = document.getElementById("replayMessage");
-		fieldLevel = document.getElementById("levelValue");
-		levelCircle = document.getElementById("levelCircleStroke");
-		document.addEventListener('mousemove', handleMouseMove, false);
-
 		initializeAudioVariables();
-
 		createScene();
-		
 		//Add Plane Geometry (Outside border Planes use same concept as lab week3 mobius strip)
 		{
+
+			//var 
+			function addPlanes(){
+
+			}
 			var planeGeometry = new THREE.PlaneGeometry(315, 1500, 20, 50);
 			var planeMaterial = new THREE.MeshLambertMaterial({
 				color: 0x68228b, //Adjustable Values
@@ -634,254 +797,73 @@ function AddShaders(){
 			scene.add(group2);
 		
 		}
-
 		AddSpheres();
+		AddCubes();
+		addLights();
 
-
-		//Add Temp Player Geometry
-		{
-			var cubeGeometry = new THREE.BoxGeometry(20,20,20,1,1,1);
-			var cubeMat = new THREE.MeshLambertMaterial({
-				color: 0xff00ee,
-				//new THREE.Color("rgb(0, 0, 100)"),
-				//0xff00ee,
-				wireframe: true
-			});
-			var cube = new THREE.Mesh(cubeGeometry, cubeMat);
-			cube.position.y = 100;
-			scene.add(cube);
-		}
-
-		//Add Player Model
-		{
-//			var loader = new THREE.PLYLoader();
-//			var playerMesh = null;
-//			var ScaleFactIn = 5.0;
-//			loader.load('models/small_fighter.ply', function(geometry)
-//			{
-//				geometry.computeVertexNormals();
-//				geometry.computeBoundingBox();
-//
-//				var center = new THREE.Vector3();
-//				var size = new THREE.Vector3();
-//				geometry.boundingBox.getCenter(center);
-//				geometry.boundingBox.getSize(size);
-//				var min = geometry.boundingBox.min;
-//
-//				var sca = new THREE.Matrix4();
-//				var tra = new THREE.Matrix4();
-//
-//				var ScaleFact = ScaleFactIn/size.length();
-//				sca.makeScale(ScaleFact, ScaleFact, ScaleFact);
-//				tra.makeTranslation(-center.x, -center.y, -min.z);
-//
-//				var shipMaterial = new THREE.MeshLambertMaterial({
-//					color: new THREE.Color("rgb(255, 0, 0)"),
-//					wireframe: true
-//				});
-//
-//				playerMesh = new THREE.Mesh(geometry, shipMaterial);
-//				playerMesh.applyMatrix(tra);
-//				playerMesh.applyMatrix(sca);
-//
-//				playerMesh.name = "player_mesh";
-//
-//				scene.add(playerMesh);
-//			} );
-		}
-
-		//Add Lights
-		{
-			var ambientLight = new THREE.AmbientLight(0xaaaaaa);
-			var spotLight = new THREE.SpotLight(0xffffff);
-			spotLight.intensity = 0.9; //Adjustable Values
-			spotLight.position.set(-10, 40, 20);
-			spotLight.lookAt(ball1);
-			spotLight.castShadow = true;
-			scene.add(ambientLight);
-			scene.add(spotLight);
-		}
-
-		//createCoins();
-		//createEnnemies();
-		//createParticles();
 		
-		function updatePlayer(mesh, amount){
-			var targetY = normalize(amount,-.75,.75,25, 150);
-			var targetX = normalize(amount,-.75,.75,-100, 100);
-			mesh.position.y += (targetY-mesh.position.y)*0.1;
-			mesh.rotation.z = (targetY-mesh.position.y)*0.0128;
-			mesh.rotation.x = (mesh.position.y-targetY)*0.0064;
-			//mousePos.y
-			//mousePos.x
-		}
+		animate();
 
-		function updateShaders(){
-
-		}
-
-//		function updatePlayer(mesh){
-//
-//			game.planeSpeed = normalize(mousePos.x,-.5,.5,game.planeMinSpeed, game.planeMaxSpeed);
-//			var targetY = normalize(mousePos.y,-.75,.75,game.planeDefaultHeight-game.planeAmpHeight, game.planeDefaultHeight+game.planeAmpHeight);
-//			var targetX = normalize(mousePos.x,-1,1,-game.planeAmpWidth*.7, -game.planeAmpWidth);
-//		  
-//			game.planeCollisionDisplacementX += game.planeCollisionSpeedX;
-//			targetX += game.planeCollisionDisplacementX;
-//		  
-//		  
-//			game.planeCollisionDisplacementY += game.planeCollisionSpeedY;
-//			targetY += game.planeCollisionDisplacementY;
-//		  
-//			mesh.position.y += (targetY-mesh.position.y)*deltaTime*game.planeMoveSensivity;
-//			mesh.position.x += (targetX-mesh.position.x)*deltaTime*game.planeMoveSensivity;
-//		  
-//			mesh.rotation.z = (targetY-mesh.position.y)*deltaTime*game.planeRotXSensivity;
-//			mesh.rotation.x = (mesh.position.y-targetY)*deltaTime*game.planeRotZSensivity;
-//			var targetCameraZ = normalize(game.planeSpeed, game.planeMinSpeed, game.planeMaxSpeed, game.cameraNearPos, game.cameraFarPos);
-//			camera.fov = normalize(mousePos.x,-1,1,40, 80);
-//			camera.updateProjectionMatrix ()
-//			camera.position.y += (mesh.position.y - camera.position.y)*deltaTime*game.cameraSensivity;
-//		  
-//			game.planeCollisionSpeedX += (0-game.planeCollisionSpeedX)*deltaTime * 0.03;
-//			game.planeCollisionDisplacementX += (0-game.planeCollisionDisplacementX)*deltaTime *0.01;
-//			game.planeCollisionSpeedY += (0-game.planeCollisionSpeedY)*deltaTime * 0.03;
-//			game.planeCollisionDisplacementY += (0-game.planeCollisionDisplacementY)*deltaTime *0.01;
-//		  
-//		}
-
-		function updateCameraFov(amount){
-			camera.fov = normalize(amount,-1,1,50, 70);
-			camera.updateProjectionMatrix();
-		}
-		//mousePos.x
-			
-		function normalize(v,vmin,vmax,tmin, tmax){
-			var nv = Math.max(Math.min(v,vmax), vmin);
-			var dv = vmax-vmin;
-			var pc = (nv-vmin)/dv;
-			var dt = tmax-tmin;
-			var tv = tmin + (pc*dt);
-			return tv;
-		}
-
-		//document.getElementById('out').appendChild(renderer.domElement);
-		window.addEventListener('resize', onWindowResize, false);
-		document.getElementById('out').appendChild(renderer.domElement);
-
-		document.addEventListener('mousemove', handleMouseMove, false);
-		document.addEventListener('touchmove', handleTouchMove, false);
-		document.addEventListener('mouseup', handleMouseUp, false);
-		document.addEventListener('touchend', handleTouchEnd, false);
-
-	function render() {
-		updateAudioVariables();
-	
-		updateShaders();
-		updatePlayer(cube, overallAvg/150);
-		updateCameraFov(overallAvg/150);
-	
-		//Adds Mesh Distortion
-		{
-			distortPlane(getPlanes(0), modulate(upperAvgFr, 0, 1, 0.5, 4));
-			distortBall(ball1, modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8), modulate(upperAvgFr, 0, 1, 0, 4));
-			distortBall(ball2, modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8), modulate(upperAvgFr, 0, 1, 0, 4));
-		}
-	
-		//Adds Rotation Values
-		{
-			var ballRotSpd = (overallAvg/10500) //Adjustable Value//
-			//var ballRotSpd = 0.005;
-			ball1.rotation.x += ballRotSpd;
-			ball1.rotation.y += ballRotSpd;
-			ball1.rotation.z += ballRotSpd;
-			ball2.rotation.x += ballRotSpd;
-			ball2.rotation.y += ballRotSpd;
-			ball2.rotation.z += ballRotSpd;
-
-			//group1
-			//group1.rotation.z += ballRotSpd/2;
-			
-			group.rotation.z += ballRotSpd/2;
-			group2.rotation.z += -ballRotSpd/2;
-		}
-		renderer.render(scene, camera);
-		requestAnimationFrame(render);
-	}
 		render();
+		//renderer.render(scene, camera);
+		
+		function render() {
+			updateAudioVariables();
+			updateMesh(cube1, lowerMaxFr);
+			updateMesh(cube2, lowerAvgFr);
+			updateMesh(cube3, overallAvg/150);
+			updateMesh(cube4, upperMaxFr);
+			updateMesh(cube5, upperAvgFr);
+
+			updateCameraFov(overallAvg/150);
+		
+			//Adds Mesh Distortion
+			{
+				distortPlane(getPlanes(0), modulate(upperAvgFr, 0, 1, 0.5, 4));
+				distortBall(ball1, modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8), modulate(upperAvgFr, 0, 1, 0, 4));
+				distortBall(ball2, modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8), modulate(upperAvgFr, 0, 1, 0, 4));
+			}
+		
+			//Adds Rotation Values
+			{
+				var ballRotSpd = (overallAvg/10500) //Adjustable Value//
+				//var ballRotSpd = 0.005;
+				ball1.rotation.x += ballRotSpd;
+				ball1.rotation.y += ballRotSpd;
+				ball1.rotation.z += ballRotSpd;
+				ball2.rotation.x += ballRotSpd;
+				ball2.rotation.y += ballRotSpd;
+				ball2.rotation.z += ballRotSpd;
+
+				//group1
+				//group1.rotation.z += ballRotSpd/2;
+				
+				group.rotation.z += ballRotSpd/2;
+				group2.rotation.z += -ballRotSpd/2;
+			}
+
+			//uniforms.u_time.value = clock.getElapsedTime();
+			//uniforms.u_frame.value += 1.0;
+			//composer.render();
+		
+			renderer.render(scene, camera);
+			requestAnimationFrame(render);
+			//RAF();
+			
+		}
 		audio.play();
+
 	}
 
-	// HANDLE MOUSE EVENTS
-	var mousePos = { x: 0, y: 0 };
-	function handleMouseMove(event) {
-	  var tx = -1 + (event.clientX / WIDTH)*2;
-	  var ty = 1 - (event.clientY / HEIGHT)*2;
-	  mousePos = {x:tx, y:ty};
+	function _RAF(){
+		requestAnimationFrame(() => {
+			renderer.render(scene, camera);
+			this._RAF();
+		});
 	}
+window.addEventListener('load', play, false);
+window.addEventListener('resize', onWindowResize, false);
+document.getElementById('out').appendChild(renderer.domElement);
 
-	//document.body.addEventListener('touchend', function(ev) { context.resume(); });
-
-	//Mesh Distortion Functions
-	{
-		//distorts the ball mesh with bass and treble data from audio file
-		function distortBall(mesh, bassFr, treFr) {
-			//calculates new locations for every verticie in the mesh
-			mesh.geometry.vertices.forEach(function (vertex, i) {
-				var offset = mesh.geometry.parameters.radius;
-				//Base Amplifier value
-				var amp = 10; //Adjustable value//
-				//returns the number of milliseconds since 1st jan 1970, for extra random noise
-				var time = Date.now();
-				vertex.normalize();
-				var rf = 0.00001;
-				//calculating new vert distance from base mesh
-				var distance = (offset + bassFr ) + noise.noise3D(vertex.x + time *rf*7, vertex.y +  time*rf*8, vertex.z + time*rf*9) * amp * treFr;
-				vertex.multiplyScalar(distance);
-			});
-			//just updates the object's verticies and faces
-			mesh.geometry.verticesNeedUpdate = true;
-			mesh.geometry.normalsNeedUpdate = true;
-			mesh.geometry.computeVertexNormals();
-			mesh.geometry.computeFaceNormals();
-		}
-
-		//same as distortBall, except it uses 2D noise instead of 3D, moves in Z direction instead of multiplyScalar
-		function distortPlane(mesh, distortionFr) {
-			mesh.geometry.vertices.forEach(function (vertex, i) {
-				var amp = 20;
-				var time = Date.now();
-				var distance = (noise.noise2D(vertex.x + time * 0.0003, vertex.y + time * 0.0001) + 0) * distortionFr * amp;
-				vertex.z = distance;
-			});
-			mesh.geometry.verticesNeedUpdate = true;
-			mesh.geometry.normalsNeedUpdate = true;
-			mesh.geometry.computeVertexNormals();
-			mesh.geometry.computeFaceNormals();
-		}
-	}
-
-	//Misc Calculation Functions
-	{
-		//like, does fractions, man
-		function fractionate(val, minVal, maxVal) {
-			return (val - minVal)/(maxVal - minVal);
-		}
-		//returns changes in volume and Frequency
-		function modulate(val, minVal, maxVal, outMin, outMax) {
-			var fr = fractionate(val, minVal, maxVal);
-			var delta = outMax - outMin;
-			return outMin + (fr * delta);
-		}
-		//Returns Average of audio frequencies
-		function avg(arr){
-			var total = arr.reduce(function(sum, b) { return sum + b; });
-			return (total / arr.length);
-		}
-		//Returns maximum of each frequency
-		function max(arr){
-			return arr.reduce(function(a, b){ return Math.max(a, b); })
-		}
-	}
-
-	window.addEventListener('load', play, false);
+document.addEventListener('mousemove', handleMouseMove, false);
+document.addEventListener('mouseup', handleMouseUp, false);
