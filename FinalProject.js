@@ -509,7 +509,7 @@ function AddShaders(){
 	clock = new THREE.Clock(true);
 	stats = new Stats();
 	stats.dom.style.cssText = "";
-	document.getElementById("sketch-stats").appendChild(stats.dom);
+	//document.getElementById("sketch-stats").appendChild(stats.dom);
 
 	uniforms = {
 		u_time : {
@@ -537,8 +537,8 @@ function AddShaders(){
 	};
 
 	// Create the shader material
-	var shaderMaterial = new THREE.ShaderMaterial({
-		//uniforms : uniforms,
+	shaderMaterial = new THREE.ShaderMaterial({
+		uniforms : uniforms,
 		vertexShader : document.getElementById("vertexShader").textContent,
 		fragmentShader : document.getElementById("fragmentShader").textContent
 	});
@@ -553,6 +553,10 @@ function AddShaders(){
 	composer.addPass(effect);
 }
 
+
+
+
+
 	function play(event) {
 
 		fieldDistance = document.getElementById("distValue");
@@ -561,6 +565,8 @@ function AddShaders(){
 		fieldLevel = document.getElementById("levelValue");
 		levelCircle = document.getElementById("levelCircleStroke");
 		document.addEventListener('mousemove', handleMouseMove, false);
+
+		//AddShaders();
 
 		initializeAudioVariables();
 
