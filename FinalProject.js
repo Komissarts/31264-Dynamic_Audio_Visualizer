@@ -147,6 +147,8 @@ var lowerHalfArray, upperHalfArray, overallAvg, lowerMax, lowerAvg, upperMax, up
 		renderer.setSize(WIDTH, HEIGHT);
 		camera.aspect = WIDTH / HEIGHT;
 		camera.updateProjectionMatrix();
+
+		uniforms.u_resolution.value.set(window.innerWidth, window.innerHeight).multiplyScalar(window.devicePixelRatio);
 	}
 
 	function handleMouseMove(event) {
@@ -503,7 +505,18 @@ function AddPlayerModel(){
 }
 
 
-var clock, stats, controlParameters, mesh, uniforms, composer, shaderMaterial;
+	function play(event) {
+
+		fieldDistance = document.getElementById("distValue");
+		energyBar = document.getElementById("energyBar");
+		replayMessage = document.getElementById("replayMessage");
+		fieldLevel = document.getElementById("levelValue");
+		levelCircle = document.getElementById("levelCircleStroke");
+		document.addEventListener('mousemove', handleMouseMove, false);
+
+		//AddShaders();
+
+		var clock, stats, mesh, uniforms, composer, material;
 
 function AddShaders(){
 	clock = new THREE.Clock(true);
@@ -537,10 +550,10 @@ function AddShaders(){
 	};
 
 	// Create the shader material
-	shaderMaterial = new THREE.ShaderMaterial({
+	material = new THREE.ShaderMaterial({
 		uniforms : uniforms,
-		vertexShader : document.getElementById("vertexShader").textContent,
-		fragmentShader : document.getElementById("fragmentShader").textContent
+		vertexShader : document.getElementById("vertex_shader_rgb").textContent,
+		fragmentShader : document.getElementById("fragment_shader_rgb").textContent
 	});
 
 	// Initialize the effect composer
@@ -552,21 +565,6 @@ function AddShaders(){
 	effect.renderToScreen = true;
 	composer.addPass(effect);
 }
-
-
-
-
-
-	function play(event) {
-
-		fieldDistance = document.getElementById("distValue");
-		energyBar = document.getElementById("energyBar");
-		replayMessage = document.getElementById("replayMessage");
-		fieldLevel = document.getElementById("levelValue");
-		levelCircle = document.getElementById("levelCircleStroke");
-		document.addEventListener('mousemove', handleMouseMove, false);
-
-		//AddShaders();
 
 		initializeAudioVariables();
 
@@ -783,7 +781,10 @@ function AddShaders(){
 	function render() {
 		updateAudioVariables();
 	
-		updateShaders();
+		//uniforms.u_time.value = clock.getElapsedTime();
+		//uniforms.u_frame.value += 1.0;
+		//composer.render();
+
 		updatePlayer(cube, overallAvg/150);
 		updateCameraFov(overallAvg/150);
 	
@@ -888,6 +889,21 @@ function AddShaders(){
 		function max(arr){
 			return arr.reduce(function(a, b){ return Math.max(a, b); })
 		}
+	}
+
+	function onMouseMove(event) {
+		// Update the mouse uniform
+		uniforms.u_mouse.value.set(event.pageX, window.innerHeight - event.pageY).multiplyScalar(
+				window.devicePixelRatio);
+	}
+
+	/*
+	 * Updates the uniforms when the touch moves
+	 */
+	function onTouchMove(event) {
+		// Update the mouse uniform
+		uniforms.u_mouse.value.set(event.touches[0].pageX, window.innerHeight - event.touches[0].pageY).multiplyScalar(
+				window.devicePixelRatio);
 	}
 
 	window.addEventListener('load', play, false);
