@@ -1,357 +1,356 @@
 <!DOCTYPE html>
 <html lang="en" >
-<head>
-  	<meta charset="UTF-8">
-  	<title>31262 - Final Graphics Project</title>
-	<link href="https://fonts.googleapis.com/css?family=Saira" rel="stylesheet"><link rel="stylesheet" href="./style.css">
+	<head>
+		<meta charset="UTF-8">
+		<title>31262 - Final Graphics Project</title>
+		<link href="https://fonts.googleapis.com/css?family=Saira" rel="stylesheet"><link rel="stylesheet" href="./style.css">
+	</head>
+	<body>
+		<div id="content">
+			<!--HTML Audio Input & View stuff-->
+			<label for="thefile" class="file"> Choose an audio file
+			<input type="file" id="thefile" accept="audio/*" />
+			</label>
+			<audio id="audio" controls></audio>
+			<div id="out"></div>
+		</div>
 
-</head>
-<body>
-	<div id="content">
-    
-		<label for="thefile" class="file"> Choose an audio file
-		  <input type="file" id="thefile" accept="audio/*" />
-		</label>
+		<!-- Script Imports -->
+			<!--GUI-->
+			<script src="js/dat.gui.min.js"></script>
 
-		
-	
-		<audio id="audio" controls></audio>
-		<div id="out"></div>
-	</div>
+			<!--Effect Composer & Post Processing Shaders-->
+			<script src="js/EffectComposer.js"></script>
+			<!-- <script src="https://cdn.jsdelivr.net/npm/three@0.122/examples/jsm/postprocessing/EffectComposer.js"></script> -->
+			<script src="js/GlitchPass.js"></script>
+			<script src="js/RenderPass.js"></script>
+			<script src="js/ShaderPass.js"></script>
 
+			<!--Simplex Noise-->
+			<script src='https://cdnjs.cloudflare.com/ajax/libs/simplex-noise/2.3.0/simplex-noise.min.js'></script>
 
-<!-- partial -->
-<script src='js/three.min.js'></script>
-<script src="js/dat.gui.min.js"></script>
-<script src='https://cdnjs.cloudflare.com/ajax/libs/simplex-noise/2.3.0/simplex-noise.min.js'></script>
+			<!--Main THREE.JS Script-->
+			<script src='js/three.min.js'></script>
 
-<script src="js/EffectComposer.js"></script>
-<!--
-<script src="https://cdn.jsdelivr.net/npm/three@0.122/examples/jsm/postprocessing/EffectComposer.js"></script>
--->
-<script src="js/RenderPass.js"></script>
-<script src="js/ShaderPass.js"></script>
-<!--
--->
-<script src="js/GlitchPass.js"></script>
+			<!--My Project-->
+			<script src="./FinalProject.js"></script>
 
-<script src="./FinalProject.js"></script>
+		<!--Shaders-->
+			<!--Post Processing Shaders-->
+				<!--TV Static Shaders-->
+				<script type="x-shader/x-vertex" id="tvstatic_vertexShader">
+				#define GLSLIFY 1
+				// Texture varyings
+				varying vec2 v_uv;
+				
+				/*
+				* The main program
+				*/
+				void main() {
+					// Calculate the varyings
+					v_uv = uv;
+				
+					// Vertex shader output
+					gl_Position = vec4(position, 1.0);
+				}
+				</script>
 
-<!--Post Processing Shaders-->
-<!--TV Static Shaders-->
-<script type="x-shader/x-vertex" id="tvstatic_vertexShader">
-	#define GLSLIFY 1
-	// Texture varyings
-	varying vec2 v_uv;
-	
-	/*
-	 * The main program
-	 */
-	void main() {
-		// Calculate the varyings
-		v_uv = uv;
-	
-		// Vertex shader output
-		gl_Position = vec4(position, 1.0);
-	}
-</script>
+				<script type="x-shader/x-fragment" id="tvstatic_fragmentShader">
+			#define GLSLIFY 1
+			//Common uniforms
+			uniform vec2 u_resolution;
+			uniform vec2 u_mouse;
+			uniform float u_time;
+			uniform float u_frame;
 
-<script type="x-shader/x-fragment" id="tvstatic_fragmentShader">
-#define GLSLIFY 1
-//Common uniforms
-uniform vec2 u_resolution;
-uniform vec2 u_mouse;
-uniform float u_time;
-uniform float u_frame;
+			// Texture uniforms
+			uniform sampler2D u_texture;
 
-// Texture uniforms
-uniform sampler2D u_texture;
+			// Texture varyings
+			varying vec2 v_uv;
 
-// Texture varyings
-varying vec2 v_uv;
+			highp float random1d(float dt) {
+				highp float c = 43758.5453;
+				highp float sn = mod(dt, 3.14);
+				return fract(sin(sn) * c);
+			}
 
-highp float random1d(float dt) {
-    highp float c = 43758.5453;
-    highp float sn = mod(dt, 3.14);
-    return fract(sin(sn) * c);
-}
+			highp float noise1d(float value) {
+				highp float i = floor(value);
+				highp float f = fract(value);
+				return mix(random1d(i), random1d(i + 1.0), smoothstep(0.0, 1.0, f));
+			}
 
-highp float noise1d(float value) {
-	highp float i = floor(value);
-	highp float f = fract(value);
-	return mix(random1d(i), random1d(i + 1.0), smoothstep(0.0, 1.0, f));
-}
+			highp float random2d(vec2 co) {
+				highp float a = 12.9898;
+				highp float b = 78.233;
+				highp float c = 43758.5453;
+				highp float dt = dot(co.xy, vec2(a, b));
+				highp float sn = mod(dt, 3.14);
+				return fract(sin(sn) * c);
+			}
 
-highp float random2d(vec2 co) {
-    highp float a = 12.9898;
-    highp float b = 78.233;
-    highp float c = 43758.5453;
-    highp float dt = dot(co.xy, vec2(a, b));
-    highp float sn = mod(dt, 3.14);
-    return fract(sin(sn) * c);
-}
+			void main() {
+				// Calculate the effect relative strength
+				float strength = (0.3 + 0.7 * noise1d(0.3 * u_time)) * u_mouse.x / u_resolution.x;
 
-void main() {
-	// Calculate the effect relative strength
-	float strength = (0.3 + 0.7 * noise1d(0.3 * u_time)) * u_mouse.x / u_resolution.x;
+				// Calculate the effect jump at the current time interval
+				float jump = 500.0 * floor(0.3 * (u_mouse.x / u_resolution.x) * (u_time + noise1d(u_time)));
 
-	// Calculate the effect jump at the current time interval
-	float jump = 500.0 * floor(0.3 * (u_mouse.x / u_resolution.x) * (u_time + noise1d(u_time)));
+				// Shift the texture coordinates
+				vec2 uv = v_uv;
+				uv.y += 0.2 * strength * (noise1d(5.0 * v_uv.y + 2.0 * u_time + jump) - 0.5);
+				uv.x += 0.1 * strength * (noise1d(100.0 * strength * uv.y + 3.0 * u_time + jump) - 0.5);
 
-	// Shift the texture coordinates
-	vec2 uv = v_uv;
-	uv.y += 0.2 * strength * (noise1d(5.0 * v_uv.y + 2.0 * u_time + jump) - 0.5);
-	uv.x += 0.1 * strength * (noise1d(100.0 * strength * uv.y + 3.0 * u_time + jump) - 0.5);
+				// Get the texture pixel color
+				vec3 pixel_color = texture2D(u_texture, uv).rgb;
 
-	// Get the texture pixel color
-	vec3 pixel_color = texture2D(u_texture, uv).rgb;
+				// Add some white noise
+				pixel_color += vec3(5.0 * strength * (random2d(v_uv + 1.133001 * vec2(u_time, 1.13)) - 0.5));
 
-	// Add some white noise
-	pixel_color += vec3(5.0 * strength * (random2d(v_uv + 1.133001 * vec2(u_time, 1.13)) - 0.5));
+				// Fragment shader output
+				gl_FragColor = vec4(pixel_color, 1.0);
+			}
+				</script>
 
-	// Fragment shader output
-	gl_FragColor = vec4(pixel_color, 1.0);
-}
-</script>
+				<!--RGB Shift Shaders-->
+				<script type="x-shader/x-vertex" id="rgbshift_vertexShader">
 
-<!--RGB Shift Shaders-->
-<script type="x-shader/x-vertex" id="rgbshift_vertexShader">
+				#define GLSLIFY 1
+				// Texture varyings
+				varying vec2 v_uv;
 
-	#define GLSLIFY 1
-	// Texture varyings
-	varying vec2 v_uv;
+				/*
+				* The main program
+				*/
+				void main() {
+					// Calculate the varyings
+					v_uv = uv;
 
-	/*
-	* The main program
-	*/
-	void main() {
-		// Calculate the varyings
-		v_uv = uv;
+					// Vertex shader output
+					gl_Position = vec4(position, 1.0);
+				}
+				</script>
+				
+				<script type="x-shader/x-fragment" id="rgbshift_fragmentShader">
+				#define GLSLIFY 1
+				// Common uniforms
+				uniform vec2 u_resolution;
+				uniform vec2 u_mouse;
+				uniform float u_time;
+				uniform float u_frame;
 
-		// Vertex shader output
-		gl_Position = vec4(position, 1.0);
-	}
-</script>
+				// Texture uniforms
+				uniform sampler2D u_texture;
 
-<script type="x-shader/x-fragment" id="rgbshift_fragmentShader">
-	#define GLSLIFY 1
-	// Common uniforms
-	uniform vec2 u_resolution;
-	uniform vec2 u_mouse;
-	uniform float u_time;
-	uniform float u_frame;
+				// Texture varyings
+				varying vec2 v_uv;
 
-	// Texture uniforms
-	uniform sampler2D u_texture;
+				/*
+				* The main program
+				*/
+				void main() {
+					// Calculate the color offset directions
+					float angle = u_time;
+					vec2 red_offset = vec2(cos(angle), sin(angle));
+					angle += radians(120.0);
+					vec2 green_offset = vec2(cos(angle), sin(angle));
+					angle += radians(120.0);
+					vec2 blue_offset = vec2(cos(angle), sin(angle));
 
-	// Texture varyings
-	varying vec2 v_uv;
+					// Calculate the offset size as a function of the pixel distance to the center
+					float offset_size = 0.1 * length(gl_FragCoord.xy - 0.5 * u_resolution);
 
-	/*
-	* The main program
-	*/
-	void main() {
-		// Calculate the color offset directions
-		float angle = u_time;
-		vec2 red_offset = vec2(cos(angle), sin(angle));
-		angle += radians(120.0);
-		vec2 green_offset = vec2(cos(angle), sin(angle));
-		angle += radians(120.0);
-		vec2 blue_offset = vec2(cos(angle), sin(angle));
+					// Scale the offset size by the relative mouse position
+					offset_size *= u_mouse.x / u_resolution.x;
 
-		// Calculate the offset size as a function of the pixel distance to the center
-		float offset_size = 0.1 * length(gl_FragCoord.xy - 0.5 * u_resolution);
+					// Extract the pixel color values from the input texture
+					float red = texture2D(u_texture, v_uv - offset_size * red_offset / u_resolution).r;
+					float green = texture2D(u_texture, v_uv - offset_size * green_offset / u_resolution).g;
+					float blue = texture2D(u_texture, v_uv - offset_size * blue_offset / u_resolution).b;
 
-		// Scale the offset size by the relative mouse position
-		offset_size *= u_mouse.x / u_resolution.x;
+					// Fragment shader output
+					gl_FragColor = vec4(red, green, blue, 1.0);
+				}
+				</script>
 
-		// Extract the pixel color values from the input texture
-		float red = texture2D(u_texture, v_uv - offset_size * red_offset / u_resolution).r;
-		float green = texture2D(u_texture, v_uv - offset_size * green_offset / u_resolution).g;
-		float blue = texture2D(u_texture, v_uv - offset_size * blue_offset / u_resolution).b;
+			<!--Object Shaders-->
+				<!--Pencil Shaders-->
+				<script type="x-shader/x-vertex" id="pencilshader_vertexShader">
+				#define GLSLIFY 1
+				// Common varyings
+				varying vec3 v_position;
+				varying vec3 v_normal;
+				
+				/*
+				* The main program
+				*/
+				void main() {
+					// Save the varyings
+					v_position = position;
+					v_normal = normalize(normalMatrix * normal);
+				
+					// Vertex shader output
+					gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+				}
+				</script>
 
-		// Fragment shader output
-		gl_FragColor = vec4(red, green, blue, 1.0);
-	}
-</script>
+				<script type="x-shader/x-fragment" id="pencilshader_fragmentShader">
+				#define GLSLIFY 1
+				// Common uniforms
+				uniform vec2 u_resolution;
+				uniform vec2 u_mouse;
+				uniform float u_time;
+				uniform float u_frame;
+				
+				// Common varyings
+				varying vec3 v_position;
+				varying vec3 v_normal;
+				
+				/*
+				* Returns a rotation matrix for the given angle
+				*/
+				mat2 rotate(float angle) {
+					return mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
+				}
+				
+				/*
+				*  Calculates the diffuse factor produced by the light illumination
+				*/
+				float diffuseFactor(vec3 normal, vec3 light_direction) {
+					float df = dot(normalize(normal), normalize(light_direction));
+				
+					if (gl_FrontFacing) {
+						df = -df;
+					}
+				
+					return max(0.0, df);
+				}
+				
+				/*
+				* Returns a value between 1 and 0 that indicates if the pixel is inside the horizontal line
+				*/
+				float horizontalLine(vec2 pixel, float y_pos, float width) {
+					return 1.0 - smoothstep(-1.0, 1.0, abs(pixel.y - y_pos) - 0.5 * width);
+				}
+				
+				/*
+				* The main program
+				*/
+				void main() {
+					// Use the mouse position to define the light direction
+					float min_resolution = min(u_resolution.x, u_resolution.y);
+					vec3 light_direction = -vec3((u_mouse - 0.5 * u_resolution) / min_resolution, 0.5);
+				
+					// Calculate the light diffusion factor
+					float df = diffuseFactor(v_normal, light_direction);
+				
+					// Move the pixel coordinates origin to the center of the screen
+					vec2 pos = gl_FragCoord.xy - 0.5 * u_resolution;
+				
+					// Rotate the coordinates 20 degrees
+					pos = rotate(radians(20.0)) * pos;
+				
+					// Define the first group of pencil lines
+					float line_width = 7.0 * (1.0 - smoothstep(0.0, 0.3, df)) + 0.5;
+					float lines_sep = 16.0;
+					vec2 grid_pos = vec2(pos.x, mod(pos.y, lines_sep));
+					float line_1 = horizontalLine(grid_pos, lines_sep / 2.0, line_width);
+					grid_pos.y = mod(pos.y + lines_sep / 2.0, lines_sep);
+					float line_2 = horizontalLine(grid_pos, lines_sep / 2.0, line_width);
+				
+					// Rotate the coordinates 50 degrees
+					pos = rotate(radians(-50.0)) * pos;
+				
+					// Define the second group of pencil lines
+					lines_sep = 12.0;
+					grid_pos = vec2(pos.x, mod(pos.y, lines_sep));
+					float line_3 = horizontalLine(grid_pos, lines_sep / 2.0, line_width);
+					grid_pos.y = mod(pos.y + lines_sep / 2.0, lines_sep);
+					float line_4 = horizontalLine(grid_pos, lines_sep / 2.0, line_width);
+				
+					// Calculate the surface color
+					float surface_color = 1.0;
+					surface_color -= 0.8 * line_1 * (1.0 - smoothstep(0.5, 0.75, df));
+					surface_color -= 0.8 * line_2 * (1.0 - smoothstep(0.4, 0.5, df));
+					surface_color -= 0.8 * line_3 * (1.0 - smoothstep(0.4, 0.65, df));
+					surface_color -= 0.8 * line_4 * (1.0 - smoothstep(0.2, 0.4, df));
+					surface_color = clamp(surface_color, 0.05, 1.0);
 
-<!--Object Shaders-->
-	<!--Pencil Shaders-->
-<script type="x-shader/x-vertex" id="pencilshader_vertexShader">
-	#define GLSLIFY 1
-	// Common varyings
-	varying vec3 v_position;
-	varying vec3 v_normal;
-	
-	/*
-	 * The main program
-	 */
-	void main() {
-		// Save the varyings
-		v_position = position;
-		v_normal = normalize(normalMatrix * normal);
-	
-		// Vertex shader output
-		gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-	}
-</script>
+					// Fragment shader output
+					gl_FragColor = vec4(vec3(surface_color,0,0), .9);
+				}
+				</script>
 
-<script type="x-shader/x-fragment" id="pencilshader_fragmentShader">
-	#define GLSLIFY 1
-	// Common uniforms
-	uniform vec2 u_resolution;
-	uniform vec2 u_mouse;
-	uniform float u_time;
-	uniform float u_frame;
-	
-	// Common varyings
-	varying vec3 v_position;
-	varying vec3 v_normal;
-	
-	/*
-	 * Returns a rotation matrix for the given angle
-	 */
-	mat2 rotate(float angle) {
-		return mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
-	}
-	
-	/*
-	 *  Calculates the diffuse factor produced by the light illumination
-	 */
-	float diffuseFactor(vec3 normal, vec3 light_direction) {
-		float df = dot(normalize(normal), normalize(light_direction));
-	
-		if (gl_FrontFacing) {
-			df = -df;
-		}
-	
-		return max(0.0, df);
-	}
-	
-	/*
-	 * Returns a value between 1 and 0 that indicates if the pixel is inside the horizontal line
-	 */
-	float horizontalLine(vec2 pixel, float y_pos, float width) {
-		return 1.0 - smoothstep(-1.0, 1.0, abs(pixel.y - y_pos) - 0.5 * width);
-	}
-	
-	/*
-	 * The main program
-	 */
-	void main() {
-		// Use the mouse position to define the light direction
-		float min_resolution = min(u_resolution.x, u_resolution.y);
-		vec3 light_direction = -vec3((u_mouse - 0.5 * u_resolution) / min_resolution, 0.5);
-	
-		// Calculate the light diffusion factor
-		float df = diffuseFactor(v_normal, light_direction);
-	
-		// Move the pixel coordinates origin to the center of the screen
-		vec2 pos = gl_FragCoord.xy - 0.5 * u_resolution;
-	
-		// Rotate the coordinates 20 degrees
-		pos = rotate(radians(20.0)) * pos;
-	
-		// Define the first group of pencil lines
-		float line_width = 7.0 * (1.0 - smoothstep(0.0, 0.3, df)) + 0.5;
-		float lines_sep = 16.0;
-		vec2 grid_pos = vec2(pos.x, mod(pos.y, lines_sep));
-		float line_1 = horizontalLine(grid_pos, lines_sep / 2.0, line_width);
-		grid_pos.y = mod(pos.y + lines_sep / 2.0, lines_sep);
-		float line_2 = horizontalLine(grid_pos, lines_sep / 2.0, line_width);
-	
-		// Rotate the coordinates 50 degrees
-		pos = rotate(radians(-50.0)) * pos;
-	
-		// Define the second group of pencil lines
-		lines_sep = 12.0;
-		grid_pos = vec2(pos.x, mod(pos.y, lines_sep));
-		float line_3 = horizontalLine(grid_pos, lines_sep / 2.0, line_width);
-		grid_pos.y = mod(pos.y + lines_sep / 2.0, lines_sep);
-		float line_4 = horizontalLine(grid_pos, lines_sep / 2.0, line_width);
-	
-		// Calculate the surface color
-		float surface_color = 1.0;
-		surface_color -= 0.8 * line_1 * (1.0 - smoothstep(0.5, 0.75, df));
-		surface_color -= 0.8 * line_2 * (1.0 - smoothstep(0.4, 0.5, df));
-		surface_color -= 0.8 * line_3 * (1.0 - smoothstep(0.4, 0.65, df));
-		surface_color -= 0.8 * line_4 * (1.0 - smoothstep(0.2, 0.4, df));
-		surface_color = clamp(surface_color, 0.05, 1.0);
+				<!--Stripe Segment Shader-->
+				<script type="x-shader/x-vertex" id="stripeshader_vertexShader">
+				#define GLSLIFY 1
+				// Common varyings
+				varying vec3 v_position;
+				varying vec3 v_normal;
+				
+				/*
+				* The main program
+				*/
+				void main() {
+					// Save the varyings
+					v_position = position;
+					v_normal = normalize(normalMatrix * normal);
+				
+					// Vertex shader output
+					gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+				}
+				</script>
 
-		// Fragment shader output
-		gl_FragColor = vec4(vec3(surface_color,0,0), .9);
-	}
-</script>
-
-	<!--Stripe Segment Shader-->
-<script type="x-shader/x-vertex" id="stripeshader_vertexShader">
-	#define GLSLIFY 1
-	// Common varyings
-	varying vec3 v_position;
-	varying vec3 v_normal;
-	
-	/*
-	 * The main program
-	 */
-	void main() {
-		// Save the varyings
-		v_position = position;
-		v_normal = normalize(normalMatrix * normal);
-	
-		// Vertex shader output
-		gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-	}
-</script>
-
-<script type="x-shader/x-fragment" id="stripeshader_fragmentShader">
-	#define GLSLIFY 1
-	// Common uniforms
-	uniform vec2 u_resolution;
-	uniform vec2 u_mouse;
-	uniform float u_time;
-	uniform float u_frame;
-	
-	// Common varyings
-	varying vec3 v_position;
-	varying vec3 v_normal;
-	
-	/*
-	 *  Calculates the diffuse factor produced by the light illumination
-	 */
-	float diffuseFactor(vec3 normal, vec3 light_direction) {
-		float df = dot(normalize(normal), normalize(light_direction));
-	
-		if (gl_FrontFacing) {
-			df = -df;
-		}
-	
-		return max(0.0, df);
-	}
-	
-	/*
-	 * The main program
-	 */
-	void main() {
-		// Use the mouse position to define the light direction
-		float min_resolution = min(u_resolution.x, u_resolution.y);
-		vec3 light_direction = -vec3((u_mouse - 0.5 * u_resolution) / min_resolution, 0.5);
-	
-		// Calculate the light diffusion factor
-		float df = diffuseFactor(v_normal, light_direction);
-	
-		// Calculate the surface color
-		float surface_color = df;
-	
-		// Don't paint the pixels between the stripes
-		if (cos(2.0 * v_position.y + 3.0 * u_time) < 0.0) {
-			discard;
-		}
-	
-		// Fragment shader output
-		gl_FragColor = vec4(vec3(surface_color,0,0), 1.0);
-	}
-</script>
+				<script type="x-shader/x-fragment" id="stripeshader_fragmentShader">
+				#define GLSLIFY 1
+				// Common uniforms
+				uniform vec2 u_resolution;
+				uniform vec2 u_mouse;
+				uniform float u_time;
+				uniform float u_frame;
+				
+				// Common varyings
+				varying vec3 v_position;
+				varying vec3 v_normal;
+				
+				/*
+				*  Calculates the diffuse factor produced by the light illumination
+				*/
+				float diffuseFactor(vec3 normal, vec3 light_direction) {
+					float df = dot(normalize(normal), normalize(light_direction));
+				
+					if (gl_FrontFacing) {
+						df = -df;
+					}
+				
+					return max(0.0, df);
+				}
+				
+				/*
+				* The main program
+				*/
+				void main() {
+					// Use the mouse position to define the light direction
+					float min_resolution = min(u_resolution.x, u_resolution.y);
+					vec3 light_direction = -vec3((u_mouse - 0.5 * u_resolution) / min_resolution, 0.5);
+				
+					// Calculate the light diffusion factor
+					float df = diffuseFactor(v_normal, light_direction);
+				
+					// Calculate the surface color
+					float surface_color = df;
+				
+					// Don't paint the pixels between the stripes
+					if (cos(2.0 * v_position.y + 3.0 * u_time) < 0.0) {
+						discard;
+					}
+				
+					// Fragment shader output
+					gl_FragColor = vec4(vec3(surface_color,0,0), 1.0);
+				}
+				</script>
 
 
-</body>
+	</body>
 </html>
