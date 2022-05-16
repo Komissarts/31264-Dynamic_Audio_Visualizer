@@ -1,10 +1,5 @@
-//IMPORT SPACESHIP MODEL FOR CRAFT
-//CLEAN UP CODE LMAO
-//Add GUI - Adjustable volumne, colours, lighting, mesh distortion intensity ect.
 //import {EffectComposer} from 'js/EffectComposer.js';
 //import {RenderPass} from 'js/RenderPass.js';
-
-
 
 //Document Onload & File Switch
 {
@@ -351,7 +346,7 @@ function resetGame(){
 }
 }
 
-//Scene, Light, Shader & Audio Initialization
+//Scene, Light, Shader, GUI & Audio Initialization
 {
 	//createScene() Variables
 	var scene, camera, fieldOfView, aspectRatio, nearPlane, farPlane, renderer, container, group, group1, group2, HEIGHT, WIDTH, clock;
@@ -384,12 +379,14 @@ function resetGame(){
 		renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
 		renderer.setSize(WIDTH, HEIGHT);
 		renderer.shadowMap.enabled = true;
+		
 
 		container = document.getElementById('out').appendChild(renderer.domElement);
 	}
 
-	//Shader PostProcessing Variables
-	var uniforms, shader_material, composer;
+	//Shader Variables
+	var uniforms, shamat_tvStatic, SP_tvStatic_effect, SP_RGBShift_effect, 
+	shamat_RGBShift, composer, shamat_pencilshader, shamat_stripeshader;
 	function addShaders(){
 		//Uniforms
 		uniforms = {
@@ -417,20 +414,48 @@ function resetGame(){
 			}
 		};
 
-		// Create the shader material
-		shader_material = new THREE.ShaderMaterial({
+		// Create the shader materials
+		this.shamat_tvStatic = new THREE.ShaderMaterial({
 			uniforms : uniforms,
 			vertexShader : document.getElementById("tvstatic_vertexShader"),
 			fragmentShader : document.getElementById("tvstatic_fragmentShader")
+		});
+
+		this.shamat_RGBShift = new THREE.ShaderMaterial({
+			uniforms : uniforms,
+			vertexShader : document.getElementById("rgbshift__vertexShader"),
+			fragmentShader : document.getElementById("rgbshift__fragmentShader")
+		});
+
+		this.shamat_pencilshader = new THREE.ShaderMaterial({
+			uniforms : uniforms,
+			vertexShader : document.getElementById("pencilshader_vertexShader").textContent,
+			fragmentShader : document.getElementById("pencilshader_fragmentShader").textContent,
+			side : THREE.DoubleSide,
+			transparent : true,
+			extensions : {
+				derivatives : true
+			}
+		});
+
+		this.shamat_stripeshader = new THREE.ShaderMaterial({
+			uniforms : uniforms,
+			vertexShader : document.getElementById("stripeshader_vertexShader").textContent,
+			fragmentShader : document.getElementById("stripeshader_fragmentShader").textContent,
+			side : THREE.DoubleSide,
+			transparent : true,
+			extensions : {
+				derivatives : true
+			}
 		});
 
 		////UNCAUGHT REFERENCE ERROR: EFFECTCOMPOSER IS NOT DEFINED???
 		//this.composer = new EffectComposer(this.renderer);
 		//this.composer.addPass(new RenderPass(this.scene, this.camera));
 		//// Add the post-processing effect
-		//var effect = new ShaderPass(shader_material, "u_texture");
-		//effect.renderToScreen = true;
-		//composer.addPass(effect);
+		//SP_tvStatic_effect = new ShaderPass(shamat_tvStatic, "u_texture");
+		//SP_tvStatic_effect.renderToScreen = true;
+		//composer.addPass(SP_tvStatic_effect);
 	}
 
 	//Adds Lights
@@ -444,6 +469,26 @@ function resetGame(){
 		spotLight.castShadow = true;
 		scene.add(ambientLight);
 		scene.add(spotLight);
+	}
+
+	var gui;
+	function addGUI(){
+		gui = new dat.GUI();
+		var params = {
+			Sphere_amplitude: sphere_amp,
+			Cylindrical_amplitude: floor_amp,
+			StripeShaderModifier: StripeShaderupdatemodifier
+		}
+		gui.add(params, 'Sphere_amplitude', 5, 40).onChange( function(val){
+			sphere_amp = val;
+		});
+		gui.add(params, 'Cylindrical_amplitude', 5, 50).onChange( function(val){
+			floor_amp = val;
+		});
+		gui.add(params, 'StripeShaderModifier', 0.001, 0.005).onChange( function(val){
+			StripeShaderupdatemodifier = val;
+		});
+		gui.open();
 	}
 
 	//InitializeAudioVariables()
@@ -513,6 +558,7 @@ function resetGame(){
 		//mousePos.x
 	}
 
+	var sphere_amp = 10;
 	//distorts the ball mesh with bass and treble data from audio file
 	var noise = new SimplexNoise();
 	function distortBall(mesh, bassFr, treFr) {
@@ -521,7 +567,7 @@ function resetGame(){
 					vertex.normalize();
 					var offset = mesh.geometry.parameters.radius;
 					//Base Amplifier value
-					var sphere_amp = 10; //Adjustable value//
+					 //Adjustable value//
 					//returns the number of milliseconds since 1st jan 1970, for extra random noise
 					var time = Date.now();
 					var rf = 0.00001;
@@ -536,12 +582,13 @@ function resetGame(){
 				mesh.geometry.computeFaceNormals();
 	}
 
+	var floor_amp = 20;
 	//Distorts the mesh using input frequency
 	function distortMesh(mesh, distortionFr) {
 				//ForEach function to iterate through every vertext in the mesh
 				mesh.geometry.vertices.forEach(function (vertex, i) {
 					//Adjustable base Amplifier value
-					var floor_amp = 20;
+					
 					//returns the number of milliseconds since 1st jan 1970, for extra random noise
 					var time = Date.now();
 					//calculating new vert distance from base mesh using Simplex Noise, randomized Time values and input Music Frequencies
@@ -558,20 +605,23 @@ function resetGame(){
 	//Animate Calls Render ever Frame
 	function animate(){
 		requestAnimationFrame(animate);
+		//composer.render();
 		render();
 	}
 	//Render Updates Animatons Every Frame
+	var StripeShaderupdatemodifier = 0.002;
 	function render() {
+		
 		updateAudioVariables();
 	
-		//Adds Mesh Distortion
+		//Updates Mesh Distortion
 		{
 			distortMesh(planeArr[0], modulate(upperAvgFr, 0, 1, 0.5, 4));
 			distortBall(ball1, modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8), modulate(upperAvgFr, 0, 1, 0, 4));
 			distortBall(ball2, modulate(Math.pow(lowerMaxFr, 0.8), 0, 1, 0, 8), modulate(upperAvgFr, 0, 1, 0, 4));
 		}
 	
-		//Adds Rotation Values
+		//Updates Rotation Values
 		{
 			var ballRotSpd = (overallAvg/10500) //Adjustable Value//
 			//var ballRotSpd = 0.005;
@@ -582,23 +632,11 @@ function resetGame(){
 			ball2.rotation.y += ballRotSpd;
 			ball2.rotation.z += ballRotSpd;
 
-			cube1.rotation.y += ballRotSpd;
-			cube2.rotation.y += ballRotSpd;
-			cube3.rotation.y += ballRotSpd;
-			cube4.rotation.y += ballRotSpd;
-			cube5.rotation.y += ballRotSpd;
-
-			cube1.rotation.x += ballRotSpd;
-			cube2.rotation.x += ballRotSpd;
-			cube3.rotation.x += ballRotSpd;
-			cube4.rotation.x += ballRotSpd;
-			cube5.rotation.x += ballRotSpd;
-			
-			cube1.rotation.z += ballRotSpd;
-			cube2.rotation.z += ballRotSpd;
-			cube3.rotation.z += ballRotSpd;
-			cube4.rotation.z += ballRotSpd;
-			cube5.rotation.z += ballRotSpd;
+			cube1.rotation.y += lowerMaxFr/5;
+			cube2.rotation.y += lowerAvgFr/5;
+			cube3.rotation.y += overallAvg/500;
+			cube4.rotation.y += upperMaxFr/5;
+			cube5.rotation.y += upperAvgFr;
 	
 			//group1
 			//group1.rotation.z += ballRotSpd/2;
@@ -607,7 +645,7 @@ function resetGame(){
 			group2.rotation.z += -ballRotSpd/2;
 		}
 
-		//Adds Positional Values
+		//Updates Positional Values
 		{
 			updateMesh(cube1, lowerMaxFr);
 			updateMesh(cube2, lowerAvgFr);
@@ -618,8 +656,8 @@ function resetGame(){
 
 		updateCameraFov(overallAvg/150);
 
-		//uniforms.u_time.value = clock.getElapsedTime();
-		//uniforms.u_frame.value += 1.0;
+		uniforms.u_time.value += overallAvg*StripeShaderupdatemodifier;//clock.getElapsedTime();
+		uniforms.u_frame.value += 1.0;
 
 		//composer.render();
 		renderer.render(scene, camera);
@@ -733,8 +771,10 @@ function resetGame(){
 			//0xff00ee,
 			wireframe: true
 		});
-		ball1 = new THREE.Mesh(icosahedronGeometry, ballMaterial);
-		ball2 = new THREE.Mesh(icosahedronGeometry, ballMaterial);
+		//shamat_pencilshader
+		//ballMaterial
+		ball1 = new THREE.Mesh(icosahedronGeometry, shamat_pencilshader);
+		ball2 = new THREE.Mesh(icosahedronGeometry, shamat_pencilshader);
 		ball1.position.y = 105;
 		ball1.position.x = 100;
 
@@ -746,22 +786,25 @@ function resetGame(){
 	}
 
 	//Adds the 5 Cubes
-	var cube1, cube2, cube3, cube4, cube5;
-	function AddCubes(){
+	var cube1 = {}, cube2, cube3, cube4, cube5;
+	function AddMainMeshes(){
 		//BoxGeometry(20,20,20,1,1,1);
 		//TorusKnotGeometry( 10, 3, 16, 4 );
-		var cubeGeometry = new THREE.BoxGeometry(20,20,20,1,1,1);
+		var meshGeometry = new THREE.BoxGeometry(20,20,20,1,1,1);
 		var cubeMat = new THREE.MeshLambertMaterial({
 			color: 0xff00ee,
 			//new THREE.Color("rgb(0, 0, 100)"),
 			//0xff00ee,
 			wireframe: true
 		});
-		cube1 = new THREE.Mesh(cubeGeometry, cubeMat);
-		cube2 = new THREE.Mesh(cubeGeometry, cubeMat);
-		cube3 = new THREE.Mesh(cubeGeometry, cubeMat);
-		cube4 = new THREE.Mesh(cubeGeometry, cubeMat);
-		cube5 = new THREE.Mesh(cubeGeometry, cubeMat);
+		//cubeMat
+		//shamat_stripeshader
+		//shamat_pencilshader
+		cube1 = new THREE.Mesh(meshGeometry, shamat_stripeshader);
+		cube2 = new THREE.Mesh(meshGeometry, shamat_stripeshader);
+		cube3 = new THREE.Mesh(meshGeometry, shamat_stripeshader);
+		cube4 = new THREE.Mesh(meshGeometry, shamat_stripeshader);
+		cube5 = new THREE.Mesh(meshGeometry, shamat_stripeshader);
 		cube1.position.y = 100;
 		cube2.position.y = 100;
 		cube3.position.y = 100;
@@ -867,8 +910,9 @@ function init(event) {
 	addShaders();
 	addPlanes();
 	AddSpheres();
-	AddCubes();
+	AddMainMeshes();
 	addLights();
+	addGUI();
 	animate();
 	audio.play();
 }
