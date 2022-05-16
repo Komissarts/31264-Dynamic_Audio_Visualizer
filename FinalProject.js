@@ -28,322 +28,322 @@
 
 //Old Input Game Variables
 {
-// GAME VARIABLES
-var game;
-var deltaTime = 0;
-var newTime = new Date().getTime();
-var oldTime = new Date().getTime();
-var ennemiesPool = [];
-var particlesPool = [];
-var particlesInUse = [];
+	// GAME VARIABLES
+	var game;
+	var deltaTime = 0;
+	var newTime = new Date().getTime();
+	var oldTime = new Date().getTime();
+	var ennemiesPool = [];
+	var particlesPool = [];
+	var particlesInUse = [];
 
 
-function handleMouseUp(event){
-	if (game.status == "waitingReplay"){
-		resetGame();
-		hideReplay();
-	}
-}
-	
-function handleTouchEnd(event){
-	if (game.status == "waitingReplay"){
-		resetGame();
-		hideReplay();
-	}
-}
-
-// Create & Add Partices, Enemies & Objectives
-{
-	Ennemy = function(){
-		var geom = new THREE.TetrahedronGeometry(8,2);
-		var mat = new THREE.MeshPhongMaterial({
-		  color:Colors.red,
-		  shininess:0,
-		  specular:0xffffff,
-		  shading:THREE.FlatShading
-		});
-		this.mesh = new THREE.Mesh(geom,mat);
-		this.mesh.castShadow = true;
-		this.angle = 0;
-		this.dist = 0;
-	}
-	
-	EnnemiesHolder = function (){
-		this.mesh = new THREE.Object3D();
-		this.ennemiesInUse = [];
-	}
-	
-	EnnemiesHolder.prototype.spawnEnnemies = function(){
-		var nEnnemies = game.level;
-	  
-		for (var i=0; i<nEnnemies; i++){
-		  var ennemy;
-		  if (ennemiesPool.length) {
-			ennemy = ennemiesPool.pop();
-		  }else{
-			ennemy = new Ennemy();
-		  }
-	  
-		  ennemy.angle = - (i*0.1);
-		  ennemy.distance = game.seaRadius + game.planeDefaultHeight + (-1 + Math.random() * 2) * (game.planeAmpHeight-20);
-		  ennemy.mesh.position.y = -game.seaRadius + Math.sin(ennemy.angle)*ennemy.distance;
-		  ennemy.mesh.position.x = Math.cos(ennemy.angle)*ennemy.distance;
-	  
-		  this.mesh.add(ennemy.mesh);
-		  this.ennemiesInUse.push(ennemy);
+	function handleMouseUp(event){
+		if (game.status == "waitingReplay"){
+			resetGame();
+			hideReplay();
 		}
 	}
-	
-	EnnemiesHolder.prototype.rotateEnnemies = function(){
-		for (var i=0; i<this.ennemiesInUse.length; i++){
-		  var ennemy = this.ennemiesInUse[i];
-		  ennemy.angle += game.speed*deltaTime*game.ennemiesSpeed;
-	  
-		  if (ennemy.angle > Math.PI*2) ennemy.angle -= Math.PI*2;
-	  
-		  ennemy.mesh.position.y = -game.seaRadius + Math.sin(ennemy.angle)*ennemy.distance;
-		  ennemy.mesh.position.x = Math.cos(ennemy.angle)*ennemy.distance;
-		  ennemy.mesh.rotation.z += Math.random()*.1;
-		  ennemy.mesh.rotation.y += Math.random()*.1;
-	  
-		  //var globalEnnemyPosition =  ennemy.mesh.localToWorld(new THREE.Vector3());
-		  var diffPos = airplane.mesh.position.clone().sub(ennemy.mesh.position.clone());
-		  var d = diffPos.length();
-		  if (d<game.ennemyDistanceTolerance){
-			particlesHolder.spawnParticles(ennemy.mesh.position.clone(), 15, Colors.red, 3);
-	  
-			ennemiesPool.unshift(this.ennemiesInUse.splice(i,1)[0]);
-			this.mesh.remove(ennemy.mesh);
-			game.planeCollisionSpeedX = 100 * diffPos.x / d;
-			game.planeCollisionSpeedY = 100 * diffPos.y / d;
-			ambientLight.intensity = 2;
-	  
-			removeEnergy();
-			i--;
-		  }else if (ennemy.angle > Math.PI){
-			ennemiesPool.unshift(this.ennemiesInUse.splice(i,1)[0]);
-			this.mesh.remove(ennemy.mesh);
-			i--;
-		  }
+		
+	function handleTouchEnd(event){
+		if (game.status == "waitingReplay"){
+			resetGame();
+			hideReplay();
 		}
 	}
-	
-	Particle = function(){
-		var geom = new THREE.TetrahedronGeometry(3,0);
-		var mat = new THREE.MeshPhongMaterial({
-		  color:0x009999,
-		  shininess:0,
-		  specular:0xffffff,
-		  shading:THREE.FlatShading
-		});
-		this.mesh = new THREE.Mesh(geom,mat);
-	}
-	
-	Particle.prototype.explode = function(pos, color, scale){
-		var _this = this;
-		var _p = this.mesh.parent;
-		this.mesh.material.color = new THREE.Color( color);
-		this.mesh.material.needsUpdate = true;
-		this.mesh.scale.set(scale, scale, scale);
-		var targetX = pos.x + (-1 + Math.random()*2)*50;
-		var targetY = pos.y + (-1 + Math.random()*2)*50;
-		var speed = .6+Math.random()*.2;
-		TweenMax.to(this.mesh.rotation, speed, {x:Math.random()*12, y:Math.random()*12});
-		TweenMax.to(this.mesh.scale, speed, {x:.1, y:.1, z:.1});
-		TweenMax.to(this.mesh.position, speed, {x:targetX, y:targetY, delay:Math.random() *.1, ease:Power2.easeOut, onComplete:function(){
-			if(_p) _p.remove(_this.mesh);
-			_this.mesh.scale.set(1,1,1);
-			particlesPool.unshift(_this);
-		  }});
-	}
-	
-	ParticlesHolder = function (){
-		this.mesh = new THREE.Object3D();
-		this.particlesInUse = [];
-	}
-	  
-	ParticlesHolder.prototype.spawnParticles = function(pos, density, color, scale){
-	  
-		var nPArticles = density;
-		for (var i=0; i<nPArticles; i++){
-		  var particle;
-		  if (particlesPool.length) {
-			particle = particlesPool.pop();
-		  }else{
-			particle = new Particle();
-		  }
-		  this.mesh.add(particle.mesh);
-		  particle.mesh.visible = true;
-		  var _this = this;
-		  particle.mesh.position.y = pos.y;
-		  particle.mesh.position.x = pos.x;
-		  particle.explode(pos,color, scale);
+
+	// Create & Add Partices, Enemies & Objectives
+	{
+		Ennemy = function(){
+			var geom = new THREE.TetrahedronGeometry(8,2);
+			var mat = new THREE.MeshPhongMaterial({
+			color:Colors.red,
+			shininess:0,
+			specular:0xffffff,
+			shading:THREE.FlatShading
+			});
+			this.mesh = new THREE.Mesh(geom,mat);
+			this.mesh.castShadow = true;
+			this.angle = 0;
+			this.dist = 0;
+		}
+		
+		EnnemiesHolder = function (){
+			this.mesh = new THREE.Object3D();
+			this.ennemiesInUse = [];
+		}
+		
+		EnnemiesHolder.prototype.spawnEnnemies = function(){
+			var nEnnemies = game.level;
+		
+			for (var i=0; i<nEnnemies; i++){
+			var ennemy;
+			if (ennemiesPool.length) {
+				ennemy = ennemiesPool.pop();
+			}else{
+				ennemy = new Ennemy();
+			}
+		
+			ennemy.angle = - (i*0.1);
+			ennemy.distance = game.seaRadius + game.planeDefaultHeight + (-1 + Math.random() * 2) * (game.planeAmpHeight-20);
+			ennemy.mesh.position.y = -game.seaRadius + Math.sin(ennemy.angle)*ennemy.distance;
+			ennemy.mesh.position.x = Math.cos(ennemy.angle)*ennemy.distance;
+		
+			this.mesh.add(ennemy.mesh);
+			this.ennemiesInUse.push(ennemy);
+			}
+		}
+		
+		EnnemiesHolder.prototype.rotateEnnemies = function(){
+			for (var i=0; i<this.ennemiesInUse.length; i++){
+			var ennemy = this.ennemiesInUse[i];
+			ennemy.angle += game.speed*deltaTime*game.ennemiesSpeed;
+		
+			if (ennemy.angle > Math.PI*2) ennemy.angle -= Math.PI*2;
+		
+			ennemy.mesh.position.y = -game.seaRadius + Math.sin(ennemy.angle)*ennemy.distance;
+			ennemy.mesh.position.x = Math.cos(ennemy.angle)*ennemy.distance;
+			ennemy.mesh.rotation.z += Math.random()*.1;
+			ennemy.mesh.rotation.y += Math.random()*.1;
+		
+			//var globalEnnemyPosition =  ennemy.mesh.localToWorld(new THREE.Vector3());
+			var diffPos = airplane.mesh.position.clone().sub(ennemy.mesh.position.clone());
+			var d = diffPos.length();
+			if (d<game.ennemyDistanceTolerance){
+				particlesHolder.spawnParticles(ennemy.mesh.position.clone(), 15, Colors.red, 3);
+		
+				ennemiesPool.unshift(this.ennemiesInUse.splice(i,1)[0]);
+				this.mesh.remove(ennemy.mesh);
+				game.planeCollisionSpeedX = 100 * diffPos.x / d;
+				game.planeCollisionSpeedY = 100 * diffPos.y / d;
+				ambientLight.intensity = 2;
+		
+				removeEnergy();
+				i--;
+			}else if (ennemy.angle > Math.PI){
+				ennemiesPool.unshift(this.ennemiesInUse.splice(i,1)[0]);
+				this.mesh.remove(ennemy.mesh);
+				i--;
+			}
+			}
+		}
+		
+		Particle = function(){
+			var geom = new THREE.TetrahedronGeometry(3,0);
+			var mat = new THREE.MeshPhongMaterial({
+			color:0x009999,
+			shininess:0,
+			specular:0xffffff,
+			shading:THREE.FlatShading
+			});
+			this.mesh = new THREE.Mesh(geom,mat);
+		}
+		
+		Particle.prototype.explode = function(pos, color, scale){
+			var _this = this;
+			var _p = this.mesh.parent;
+			this.mesh.material.color = new THREE.Color( color);
+			this.mesh.material.needsUpdate = true;
+			this.mesh.scale.set(scale, scale, scale);
+			var targetX = pos.x + (-1 + Math.random()*2)*50;
+			var targetY = pos.y + (-1 + Math.random()*2)*50;
+			var speed = .6+Math.random()*.2;
+			TweenMax.to(this.mesh.rotation, speed, {x:Math.random()*12, y:Math.random()*12});
+			TweenMax.to(this.mesh.scale, speed, {x:.1, y:.1, z:.1});
+			TweenMax.to(this.mesh.position, speed, {x:targetX, y:targetY, delay:Math.random() *.1, ease:Power2.easeOut, onComplete:function(){
+				if(_p) _p.remove(_this.mesh);
+				_this.mesh.scale.set(1,1,1);
+				particlesPool.unshift(_this);
+			}});
+		}
+		
+		ParticlesHolder = function (){
+			this.mesh = new THREE.Object3D();
+			this.particlesInUse = [];
+		}
+		
+		ParticlesHolder.prototype.spawnParticles = function(pos, density, color, scale){
+		
+			var nPArticles = density;
+			for (var i=0; i<nPArticles; i++){
+			var particle;
+			if (particlesPool.length) {
+				particle = particlesPool.pop();
+			}else{
+				particle = new Particle();
+			}
+			this.mesh.add(particle.mesh);
+			particle.mesh.visible = true;
+			var _this = this;
+			particle.mesh.position.y = pos.y;
+			particle.mesh.position.x = pos.x;
+			particle.explode(pos,color, scale);
+			}
+		}
+		
+		Coin = function(){
+			var geom = new THREE.TetrahedronGeometry(5,0);
+			var mat = new THREE.MeshPhongMaterial({
+			color:0x009999,
+			shininess:0,
+			specular:0xffffff,
+		
+			shading:THREE.FlatShading
+			});
+			this.mesh = new THREE.Mesh(geom,mat);
+			this.mesh.castShadow = true;
+			this.angle = 0;
+			this.dist = 0;
+		}
+		
+		CoinsHolder = function (nCoins){
+			this.mesh = new THREE.Object3D();
+			this.coinsInUse = [];
+			this.coinsPool = [];
+			for (var i=0; i<nCoins; i++){
+			var coin = new Coin();
+			this.coinsPool.push(coin);
+			}
+		}
+		
+		CoinsHolder.prototype.spawnCoins = function(){
+		
+			var nCoins = 1 + Math.floor(Math.random()*10);
+			var d = game.seaRadius + game.planeDefaultHeight + (-1 + Math.random() * 2) * (game.planeAmpHeight-20);
+			var amplitude = 10 + Math.round(Math.random()*10);
+			for (var i=0; i<nCoins; i++){
+			var coin;
+			if (this.coinsPool.length) {
+				coin = this.coinsPool.pop();
+			}else{
+				coin = new Coin();
+			}
+			this.mesh.add(coin.mesh);
+			this.coinsInUse.push(coin);
+			coin.angle = - (i*0.02);
+			coin.distance = d + Math.cos(i*.5)*amplitude;
+			coin.mesh.position.y = -game.seaRadius + Math.sin(coin.angle)*coin.distance;
+			coin.mesh.position.x = Math.cos(coin.angle)*coin.distance;
+			}
+		}
+		
+		CoinsHolder.prototype.rotateCoins = function(){
+			for (var i=0; i<this.coinsInUse.length; i++){
+			var coin = this.coinsInUse[i];
+			if (coin.exploding) continue;
+			coin.angle += game.speed*deltaTime*game.coinsSpeed;
+			if (coin.angle>Math.PI*2) coin.angle -= Math.PI*2;
+			coin.mesh.position.y = -game.seaRadius + Math.sin(coin.angle)*coin.distance;
+			coin.mesh.position.x = Math.cos(coin.angle)*coin.distance;
+			coin.mesh.rotation.z += Math.random()*.1;
+			coin.mesh.rotation.y += Math.random()*.1;
+		
+			//var globalCoinPosition =  coin.mesh.localToWorld(new THREE.Vector3());
+			var diffPos = airplane.mesh.position.clone().sub(coin.mesh.position.clone());
+			var d = diffPos.length();
+			if (d<game.coinDistanceTolerance){
+				this.coinsPool.unshift(this.coinsInUse.splice(i,1)[0]);
+				this.mesh.remove(coin.mesh);
+				particlesHolder.spawnParticles(coin.mesh.position.clone(), 5, 0x009999, .8);
+				addEnergy();
+				i--;
+			}else if (coin.angle > Math.PI){
+				this.coinsPool.unshift(this.coinsInUse.splice(i,1)[0]);
+				this.mesh.remove(coin.mesh);
+				i--;
+			}
+			}
+		}
+		
+		function createCoins(){
+			coinsHolder = new CoinsHolder(20);
+			scene.add(coinsHolder.mesh)
+		}
+		
+		function createEnnemies(){
+			for (var i=0; i<10; i++){
+			var ennemy = new Ennemy();
+			ennemiesPool.push(ennemy);
+			}
+			ennemiesHolder = new EnnemiesHolder();
+			//ennemiesHolder.mesh.position.y = -game.seaRadius;
+			scene.add(ennemiesHolder.mesh)
+		}
+		
+		function createParticles(){
+			for (var i=0; i<10; i++){
+			var particle = new Particle();
+			particlesPool.push(particle);
+			}
+			particlesHolder = new ParticlesHolder();
+			//ennemiesHolder.mesh.position.y = -game.seaRadius;
+			scene.add(particlesHolder.mesh)
 		}
 	}
-	  
-	Coin = function(){
-		var geom = new THREE.TetrahedronGeometry(5,0);
-		var mat = new THREE.MeshPhongMaterial({
-		  color:0x009999,
-		  shininess:0,
-		  specular:0xffffff,
-	  
-		  shading:THREE.FlatShading
-		});
-		this.mesh = new THREE.Mesh(geom,mat);
-		this.mesh.castShadow = true;
-		this.angle = 0;
-		this.dist = 0;
+
+	function resetGame(){
+	game = {speed:0,
+			initSpeed:.00035,
+			baseSpeed:.00035,
+			targetBaseSpeed:.00035,
+			incrementSpeedByTime:.0000025,
+			incrementSpeedByLevel:.000005,
+			distanceForSpeedUpdate:100,
+			speedLastUpdate:0,
+
+			distance:0,
+			ratioSpeedDistance:50,
+			energy:100,
+			ratioSpeedEnergy:3,
+
+			level:1,
+			levelLastUpdate:0,
+			distanceForLevelUpdate:1000,
+
+			planeDefaultHeight:100,
+			planeAmpHeight:80,
+			planeAmpWidth:75,
+			planeMoveSensivity:0.005,
+			planeRotXSensivity:0.0008,
+			planeRotZSensivity:0.0004,
+			planeFallSpeed:.001,
+			planeMinSpeed:1.2,
+			planeMaxSpeed:1.6,
+			planeSpeed:0,
+			planeCollisionDisplacementX:0,
+			planeCollisionSpeedX:0,
+
+			planeCollisionDisplacementY:0,
+			planeCollisionSpeedY:0,
+
+			seaRadius:600,
+			seaLength:800,
+			//seaRotationSpeed:0.006,
+			wavesMinAmp : 5,
+			wavesMaxAmp : 20,
+			wavesMinSpeed : 0.001,
+			wavesMaxSpeed : 0.003,
+
+			cameraFarPos:500,
+			cameraNearPos:150,
+			cameraSensivity:0.002,
+
+			coinDistanceTolerance:15,
+			coinValue:3,
+			coinsSpeed:.5,
+			coinLastSpawn:0,
+			distanceForCoinsSpawn:100,
+
+			ennemyDistanceTolerance:10,
+			ennemyValue:10,
+			ennemiesSpeed:.6,
+			ennemyLastSpawn:0,
+			distanceForEnnemiesSpawn:50,
+
+			status : "playing",
+			};
+	fieldLevel.innerHTML = Math.floor(game.level);
 	}
-	  
-	CoinsHolder = function (nCoins){
-		this.mesh = new THREE.Object3D();
-		this.coinsInUse = [];
-		this.coinsPool = [];
-		for (var i=0; i<nCoins; i++){
-		  var coin = new Coin();
-		  this.coinsPool.push(coin);
-		}
-	}
-	  
-	CoinsHolder.prototype.spawnCoins = function(){
-	  
-		var nCoins = 1 + Math.floor(Math.random()*10);
-		var d = game.seaRadius + game.planeDefaultHeight + (-1 + Math.random() * 2) * (game.planeAmpHeight-20);
-		var amplitude = 10 + Math.round(Math.random()*10);
-		for (var i=0; i<nCoins; i++){
-		  var coin;
-		  if (this.coinsPool.length) {
-			coin = this.coinsPool.pop();
-		  }else{
-			coin = new Coin();
-		  }
-		  this.mesh.add(coin.mesh);
-		  this.coinsInUse.push(coin);
-		  coin.angle = - (i*0.02);
-		  coin.distance = d + Math.cos(i*.5)*amplitude;
-		  coin.mesh.position.y = -game.seaRadius + Math.sin(coin.angle)*coin.distance;
-		  coin.mesh.position.x = Math.cos(coin.angle)*coin.distance;
-		}
-	}
-	  
-	CoinsHolder.prototype.rotateCoins = function(){
-		for (var i=0; i<this.coinsInUse.length; i++){
-		  var coin = this.coinsInUse[i];
-		  if (coin.exploding) continue;
-		  coin.angle += game.speed*deltaTime*game.coinsSpeed;
-		  if (coin.angle>Math.PI*2) coin.angle -= Math.PI*2;
-		  coin.mesh.position.y = -game.seaRadius + Math.sin(coin.angle)*coin.distance;
-		  coin.mesh.position.x = Math.cos(coin.angle)*coin.distance;
-		  coin.mesh.rotation.z += Math.random()*.1;
-		  coin.mesh.rotation.y += Math.random()*.1;
-	  
-		  //var globalCoinPosition =  coin.mesh.localToWorld(new THREE.Vector3());
-		  var diffPos = airplane.mesh.position.clone().sub(coin.mesh.position.clone());
-		  var d = diffPos.length();
-		  if (d<game.coinDistanceTolerance){
-			this.coinsPool.unshift(this.coinsInUse.splice(i,1)[0]);
-			this.mesh.remove(coin.mesh);
-			particlesHolder.spawnParticles(coin.mesh.position.clone(), 5, 0x009999, .8);
-			addEnergy();
-			i--;
-		  }else if (coin.angle > Math.PI){
-			this.coinsPool.unshift(this.coinsInUse.splice(i,1)[0]);
-			this.mesh.remove(coin.mesh);
-			i--;
-		  }
-		}
-	}
-	
-	function createCoins(){
-		coinsHolder = new CoinsHolder(20);
-		scene.add(coinsHolder.mesh)
-	}
-	
-	function createEnnemies(){
-		for (var i=0; i<10; i++){
-		  var ennemy = new Ennemy();
-		  ennemiesPool.push(ennemy);
-		}
-		ennemiesHolder = new EnnemiesHolder();
-		//ennemiesHolder.mesh.position.y = -game.seaRadius;
-		scene.add(ennemiesHolder.mesh)
-	}
-	  
-	function createParticles(){
-		for (var i=0; i<10; i++){
-		  var particle = new Particle();
-		  particlesPool.push(particle);
-		}
-		particlesHolder = new ParticlesHolder();
-		//ennemiesHolder.mesh.position.y = -game.seaRadius;
-		scene.add(particlesHolder.mesh)
-	}
-}
-
-function resetGame(){
-  game = {speed:0,
-          initSpeed:.00035,
-          baseSpeed:.00035,
-          targetBaseSpeed:.00035,
-          incrementSpeedByTime:.0000025,
-          incrementSpeedByLevel:.000005,
-          distanceForSpeedUpdate:100,
-          speedLastUpdate:0,
-
-          distance:0,
-          ratioSpeedDistance:50,
-          energy:100,
-          ratioSpeedEnergy:3,
-
-          level:1,
-          levelLastUpdate:0,
-          distanceForLevelUpdate:1000,
-
-          planeDefaultHeight:100,
-          planeAmpHeight:80,
-          planeAmpWidth:75,
-          planeMoveSensivity:0.005,
-          planeRotXSensivity:0.0008,
-          planeRotZSensivity:0.0004,
-          planeFallSpeed:.001,
-          planeMinSpeed:1.2,
-          planeMaxSpeed:1.6,
-          planeSpeed:0,
-          planeCollisionDisplacementX:0,
-          planeCollisionSpeedX:0,
-
-          planeCollisionDisplacementY:0,
-          planeCollisionSpeedY:0,
-
-          seaRadius:600,
-          seaLength:800,
-          //seaRotationSpeed:0.006,
-          wavesMinAmp : 5,
-          wavesMaxAmp : 20,
-          wavesMinSpeed : 0.001,
-          wavesMaxSpeed : 0.003,
-
-          cameraFarPos:500,
-          cameraNearPos:150,
-          cameraSensivity:0.002,
-
-          coinDistanceTolerance:15,
-          coinValue:3,
-          coinsSpeed:.5,
-          coinLastSpawn:0,
-          distanceForCoinsSpawn:100,
-
-          ennemyDistanceTolerance:10,
-          ennemyValue:10,
-          ennemiesSpeed:.6,
-          ennemyLastSpawn:0,
-          distanceForEnnemiesSpawn:50,
-
-          status : "playing",
-         };
-  fieldLevel.innerHTML = Math.floor(game.level);
-}
 }
 
 //Scene, Light, Shader, GUI & Audio Initialization
@@ -390,6 +390,9 @@ function resetGame(){
 	function addShaders(){
 		//Uniforms
 		uniforms = {
+			u_alpha : {
+
+			},
 			u_time : {
 				type : "f",
 				value : 0.0
@@ -485,7 +488,7 @@ function resetGame(){
 		gui.add(params, 'Cylindrical_amplitude', 5, 50).onChange( function(val){
 			floor_amp = val;
 		});
-		gui.add(params, 'StripeShaderModifier', 0.001, 0.005).onChange( function(val){
+		gui.add(params, 'StripeShaderModifier', 0.0005, 0.005).onChange( function(val){
 			StripeShaderupdatemodifier = val;
 		});
 		gui.open();

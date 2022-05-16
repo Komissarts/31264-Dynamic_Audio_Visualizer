@@ -278,7 +278,7 @@
 					surface_color = clamp(surface_color, 0.05, 1.0);
 
 					// Fragment shader output
-					gl_FragColor = vec4(vec3(surface_color,0,0), .9);
+					gl_FragColor = vec4(vec3(surface_color,0,0), .95);
 				}
 				</script>
 
@@ -342,7 +342,7 @@
 					float surface_color = df;
 				
 					// Don't paint the pixels between the stripes
-					if (cos(2.0 * v_position.y + 3.0 * u_time) < 0.0) {
+					if (cos(1.50 * (v_position.y) + 3.0 * u_time) < 0.0) {
 						discard;
 					}
 				
