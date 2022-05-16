@@ -491,7 +491,6 @@ function resetGame(){
 		gui.open();
 	}
 
-	//InitializeAudioVariables()
 	var context, src, analyser, bufferLength, dataArray;
 	//Initializing Audio Management Variables
 	function initializeAudioVariables(){
@@ -656,16 +655,15 @@ function resetGame(){
 
 		updateCameraFov(overallAvg/150);
 
-		uniforms.u_time.value += overallAvg*StripeShaderupdatemodifier;//clock.getElapsedTime();
+		uniforms.u_time.value += overallAvg*StripeShaderupdatemodifier;
 		uniforms.u_frame.value += 1.0;
 
-		//composer.render();
 		renderer.render(scene, camera);
 		
 	}
 }
 
-//Misc Input Checks
+//Input Checks
 {
 	function onWindowResize() {
 		HEIGHT = window.innerHeight;
@@ -721,6 +719,7 @@ function resetGame(){
 	function max(arr){
 		return arr.reduce(function(a, b){ return Math.max(a, b); })
 	}
+	//Normalize Inputs to work at different ranges
 	function normalize(v,vmin,vmax,tmin, tmax){
 		var nv = Math.max(Math.min(v,vmax), vmin);
 		var dv = vmax-vmin;
@@ -731,7 +730,7 @@ function resetGame(){
 	}
 }
 
-//ADD Objects To Scene
+//Add Objects To Scene
 {
 	//EarlyTestFunction
 	function AddCubeArrayOld(){
