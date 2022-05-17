@@ -1,5 +1,9 @@
 //import {EffectComposer} from 'js/EffectComposer.js';
 //import {RenderPass} from 'js/RenderPass.js';
+//import { CopyShader } fro'./js/CopyShader.js';
+//import { ShaderPass } fro'./js/ShaderPass.js';
+//import { MaskPass } from './js/MaskPass.js';
+//import { ClearMaskPass } './js/MaskPass.js';
 
 //Document Onload & File Switch
 {
@@ -37,20 +41,19 @@
 	var particlesPool = [];
 	var particlesInUse = [];
 
-
-	function handleMouseUp(event){
-		if (game.status == "waitingReplay"){
-			resetGame();
-			hideReplay();
-		}
-	}
-		
-	function handleTouchEnd(event){
-		if (game.status == "waitingReplay"){
-			resetGame();
-			hideReplay();
-		}
-	}
+	//function handleMouseUp(event){
+	//	if (game.status == "waitingReplay"){
+	//		resetGame();
+	//		hideReplay();
+	//	}
+	//}
+	//	
+	//function handleTouchEnd(event){
+	//	if (game.status == "waitingReplay"){
+	//		resetGame();
+	//		hideReplay();
+	//	}
+	//}
 
 	// Create & Add Partices, Enemies & Objectives
 	{
@@ -542,34 +545,31 @@
 		this.upperAvgFr = upperAvg / upperHalfArray.length;
 	}
 
-	//Moves Input Mesh Up & Down using input frequencies
+	//Moves Input Mesh Up & Down using input frequencies, adds 
+	//dynamic rotation for extra visual interest
 	function updateMesh(mesh, distortionFr){
 		var targetY = normalize(distortionFr,-.75,.75,25, 150);
 		var targetX = normalize(distortionFr,-.75,.75,-100, 100);
 		mesh.position.y += (targetY-mesh.position.y)*0.1;
 		mesh.rotation.z = (targetY-mesh.position.y)*0.0128;
 		mesh.rotation.x = (mesh.position.y-targetY)*0.0064;
-		//mousePos.y
-		//mousePos.x
 	}
 
 	//Adjusts CameraFOV using input frequencies
 	function updateCameraFov(distortionFr){
 		camera.fov = normalize(distortionFr,-1,1,50, 70);
 		camera.updateProjectionMatrix();
-		//mousePos.x
 	}
 
+	//Simplex Noise importing
+	var noise = new SimplexNoise();
 	var sphere_amp = 10;
 	//distorts the ball mesh with bass and treble data from audio file
-	var noise = new SimplexNoise();
 	function distortBall(mesh, bassFr, treFr) {
 				//calculates new locations for every verticie in the mesh
 				mesh.geometry.vertices.forEach(function (vertex, i) {
 					vertex.normalize();
 					var offset = mesh.geometry.parameters.radius;
-					//Base Amplifier value
-					 //Adjustable value//
 					//returns the number of milliseconds since 1st jan 1970, for extra random noise
 					var time = Date.now();
 					var rf = 0.00001;
@@ -584,14 +584,13 @@
 				mesh.geometry.computeFaceNormals();
 	}
 
+	//Base amplitude variable - adjustable
 	var floor_amp = 20;
 	//Distorts the mesh using input frequency
 	function distortMesh(mesh, distortionFr) {
 				//ForEach function to iterate through every vertext in the mesh
 				mesh.geometry.vertices.forEach(function (vertex, i) {
-					//Adjustable base Amplifier value
-					
-					//returns the number of milliseconds since 1st jan 1970, for extra random noise
+					//returns the number of milliseconds since 1st jan 1970, for extra random noise - adds movement without needing music
 					var time = Date.now();
 					//calculating new vert distance from base mesh using Simplex Noise, randomized Time values and input Music Frequencies
 					var distance = (noise.noise2D(vertex.x + time * 0.0003, vertex.y + time * 0.0001) + 0) * distortionFr * floor_amp;
@@ -793,7 +792,7 @@
 	function AddMainMeshes(){
 		//BoxGeometry(20,20,20,1,1,1);
 		//TorusKnotGeometry( 10, 3, 16, 4 );
-		var meshGeometry = new THREE.BoxGeometry(20,20,20,1,1,1);
+		var meshGeometry = new THREE.TorusKnotGeometry( 10, 3, 16, 4 );
 		var cubeMat = new THREE.MeshLambertMaterial({
 			color: 0xff00ee,
 			//new THREE.Color("rgb(0, 0, 100)"),
@@ -925,5 +924,5 @@ function init(event) {
 	window.addEventListener('load', init, false);
 	window.addEventListener('resize', onWindowResize, false);
 	document.addEventListener('mousemove', handleMouseMove, false);
-	document.addEventListener('mouseup', handleMouseUp, false);
+	//document.addEventListener('mouseup', handleMouseUp, false);
 }
