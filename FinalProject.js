@@ -452,7 +452,7 @@
 			}
 		});
 
-		////UNCAUGHT REFERENCE ERROR: EFFECTCOMPOSER IS NOT DEFINED???
+		////UNCAUGHT REFERENCE ERROR: EFFECTCOMPOSER IS NOT DEFINED??????
 		//this.composer = new EffectComposer(this.renderer);
 		//this.composer.addPass(new RenderPass(this.scene, this.camera));
 		//// Add the post-processing effect
@@ -610,6 +610,7 @@
 		//composer.render();
 		render();
 	}
+	
 	//Render Updates Animatons Every Frame
 	var StripeShaderupdatemodifier = 0.002;
 	function render() {
