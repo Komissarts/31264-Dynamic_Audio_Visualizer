@@ -4,6 +4,9 @@
 //import { ShaderPass } fro'./js/ShaderPass.js';
 //import { MaskPass } from './js/MaskPass.js';
 //import { ClearMaskPass } './js/MaskPass.js';
+//import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+//import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+//import { GlitchPass } from 'three/examples/jsm/postprocessing/GlitchPass.js';
 
 //Document Onload & File Switch
 {
