@@ -1,12 +1,6 @@
-//import {EffectComposer} from 'js/EffectComposer.js';
-//import {RenderPass} from 'js/RenderPass.js';
-//import { CopyShader } fro'./js/CopyShader.js';
-//import { ShaderPass } fro'./js/ShaderPass.js';
-//import { MaskPass } from './js/MaskPass.js';
-//import { ClearMaskPass } './js/MaskPass.js';
-//import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-//import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-//import { GlitchPass } from 'three/examples/jsm/postprocessing/GlitchPass.js';
+//Made By Andres Roco 14250791
+//31264 Introduction to Computer Graphics
+//Dynamic Audio Visualizer
 
 //Document Onload & File Switch
 {
@@ -58,234 +52,6 @@
 	//	}
 	//}
 
-	// Create & Add Partices, Enemies & Objectives
-	{
-		Ennemy = function(){
-			var geom = new THREE.TetrahedronGeometry(8,2);
-			var mat = new THREE.MeshPhongMaterial({
-			color:Colors.red,
-			shininess:0,
-			specular:0xffffff,
-			shading:THREE.FlatShading
-			});
-			this.mesh = new THREE.Mesh(geom,mat);
-			this.mesh.castShadow = true;
-			this.angle = 0;
-			this.dist = 0;
-		}
-		
-		EnnemiesHolder = function (){
-			this.mesh = new THREE.Object3D();
-			this.ennemiesInUse = [];
-		}
-		
-		EnnemiesHolder.prototype.spawnEnnemies = function(){
-			var nEnnemies = game.level;
-		
-			for (var i=0; i<nEnnemies; i++){
-			var ennemy;
-			if (ennemiesPool.length) {
-				ennemy = ennemiesPool.pop();
-			}else{
-				ennemy = new Ennemy();
-			}
-		
-			ennemy.angle = - (i*0.1);
-			ennemy.distance = game.seaRadius + game.planeDefaultHeight + (-1 + Math.random() * 2) * (game.planeAmpHeight-20);
-			ennemy.mesh.position.y = -game.seaRadius + Math.sin(ennemy.angle)*ennemy.distance;
-			ennemy.mesh.position.x = Math.cos(ennemy.angle)*ennemy.distance;
-		
-			this.mesh.add(ennemy.mesh);
-			this.ennemiesInUse.push(ennemy);
-			}
-		}
-		
-		EnnemiesHolder.prototype.rotateEnnemies = function(){
-			for (var i=0; i<this.ennemiesInUse.length; i++){
-			var ennemy = this.ennemiesInUse[i];
-			ennemy.angle += game.speed*deltaTime*game.ennemiesSpeed;
-		
-			if (ennemy.angle > Math.PI*2) ennemy.angle -= Math.PI*2;
-		
-			ennemy.mesh.position.y = -game.seaRadius + Math.sin(ennemy.angle)*ennemy.distance;
-			ennemy.mesh.position.x = Math.cos(ennemy.angle)*ennemy.distance;
-			ennemy.mesh.rotation.z += Math.random()*.1;
-			ennemy.mesh.rotation.y += Math.random()*.1;
-		
-			//var globalEnnemyPosition =  ennemy.mesh.localToWorld(new THREE.Vector3());
-			var diffPos = airplane.mesh.position.clone().sub(ennemy.mesh.position.clone());
-			var d = diffPos.length();
-			if (d<game.ennemyDistanceTolerance){
-				particlesHolder.spawnParticles(ennemy.mesh.position.clone(), 15, Colors.red, 3);
-		
-				ennemiesPool.unshift(this.ennemiesInUse.splice(i,1)[0]);
-				this.mesh.remove(ennemy.mesh);
-				game.planeCollisionSpeedX = 100 * diffPos.x / d;
-				game.planeCollisionSpeedY = 100 * diffPos.y / d;
-				ambientLight.intensity = 2;
-		
-				removeEnergy();
-				i--;
-			}else if (ennemy.angle > Math.PI){
-				ennemiesPool.unshift(this.ennemiesInUse.splice(i,1)[0]);
-				this.mesh.remove(ennemy.mesh);
-				i--;
-			}
-			}
-		}
-		
-		Particle = function(){
-			var geom = new THREE.TetrahedronGeometry(3,0);
-			var mat = new THREE.MeshPhongMaterial({
-			color:0x009999,
-			shininess:0,
-			specular:0xffffff,
-			shading:THREE.FlatShading
-			});
-			this.mesh = new THREE.Mesh(geom,mat);
-		}
-		
-		Particle.prototype.explode = function(pos, color, scale){
-			var _this = this;
-			var _p = this.mesh.parent;
-			this.mesh.material.color = new THREE.Color( color);
-			this.mesh.material.needsUpdate = true;
-			this.mesh.scale.set(scale, scale, scale);
-			var targetX = pos.x + (-1 + Math.random()*2)*50;
-			var targetY = pos.y + (-1 + Math.random()*2)*50;
-			var speed = .6+Math.random()*.2;
-			TweenMax.to(this.mesh.rotation, speed, {x:Math.random()*12, y:Math.random()*12});
-			TweenMax.to(this.mesh.scale, speed, {x:.1, y:.1, z:.1});
-			TweenMax.to(this.mesh.position, speed, {x:targetX, y:targetY, delay:Math.random() *.1, ease:Power2.easeOut, onComplete:function(){
-				if(_p) _p.remove(_this.mesh);
-				_this.mesh.scale.set(1,1,1);
-				particlesPool.unshift(_this);
-			}});
-		}
-		
-		ParticlesHolder = function (){
-			this.mesh = new THREE.Object3D();
-			this.particlesInUse = [];
-		}
-		
-		ParticlesHolder.prototype.spawnParticles = function(pos, density, color, scale){
-		
-			var nPArticles = density;
-			for (var i=0; i<nPArticles; i++){
-			var particle;
-			if (particlesPool.length) {
-				particle = particlesPool.pop();
-			}else{
-				particle = new Particle();
-			}
-			this.mesh.add(particle.mesh);
-			particle.mesh.visible = true;
-			var _this = this;
-			particle.mesh.position.y = pos.y;
-			particle.mesh.position.x = pos.x;
-			particle.explode(pos,color, scale);
-			}
-		}
-		
-		Coin = function(){
-			var geom = new THREE.TetrahedronGeometry(5,0);
-			var mat = new THREE.MeshPhongMaterial({
-			color:0x009999,
-			shininess:0,
-			specular:0xffffff,
-		
-			shading:THREE.FlatShading
-			});
-			this.mesh = new THREE.Mesh(geom,mat);
-			this.mesh.castShadow = true;
-			this.angle = 0;
-			this.dist = 0;
-		}
-		
-		CoinsHolder = function (nCoins){
-			this.mesh = new THREE.Object3D();
-			this.coinsInUse = [];
-			this.coinsPool = [];
-			for (var i=0; i<nCoins; i++){
-			var coin = new Coin();
-			this.coinsPool.push(coin);
-			}
-		}
-		
-		CoinsHolder.prototype.spawnCoins = function(){
-		
-			var nCoins = 1 + Math.floor(Math.random()*10);
-			var d = game.seaRadius + game.planeDefaultHeight + (-1 + Math.random() * 2) * (game.planeAmpHeight-20);
-			var amplitude = 10 + Math.round(Math.random()*10);
-			for (var i=0; i<nCoins; i++){
-			var coin;
-			if (this.coinsPool.length) {
-				coin = this.coinsPool.pop();
-			}else{
-				coin = new Coin();
-			}
-			this.mesh.add(coin.mesh);
-			this.coinsInUse.push(coin);
-			coin.angle = - (i*0.02);
-			coin.distance = d + Math.cos(i*.5)*amplitude;
-			coin.mesh.position.y = -game.seaRadius + Math.sin(coin.angle)*coin.distance;
-			coin.mesh.position.x = Math.cos(coin.angle)*coin.distance;
-			}
-		}
-		
-		CoinsHolder.prototype.rotateCoins = function(){
-			for (var i=0; i<this.coinsInUse.length; i++){
-			var coin = this.coinsInUse[i];
-			if (coin.exploding) continue;
-			coin.angle += game.speed*deltaTime*game.coinsSpeed;
-			if (coin.angle>Math.PI*2) coin.angle -= Math.PI*2;
-			coin.mesh.position.y = -game.seaRadius + Math.sin(coin.angle)*coin.distance;
-			coin.mesh.position.x = Math.cos(coin.angle)*coin.distance;
-			coin.mesh.rotation.z += Math.random()*.1;
-			coin.mesh.rotation.y += Math.random()*.1;
-		
-			//var globalCoinPosition =  coin.mesh.localToWorld(new THREE.Vector3());
-			var diffPos = airplane.mesh.position.clone().sub(coin.mesh.position.clone());
-			var d = diffPos.length();
-			if (d<game.coinDistanceTolerance){
-				this.coinsPool.unshift(this.coinsInUse.splice(i,1)[0]);
-				this.mesh.remove(coin.mesh);
-				particlesHolder.spawnParticles(coin.mesh.position.clone(), 5, 0x009999, .8);
-				addEnergy();
-				i--;
-			}else if (coin.angle > Math.PI){
-				this.coinsPool.unshift(this.coinsInUse.splice(i,1)[0]);
-				this.mesh.remove(coin.mesh);
-				i--;
-			}
-			}
-		}
-		
-		function createCoins(){
-			coinsHolder = new CoinsHolder(20);
-			scene.add(coinsHolder.mesh)
-		}
-		
-		function createEnnemies(){
-			for (var i=0; i<10; i++){
-			var ennemy = new Ennemy();
-			ennemiesPool.push(ennemy);
-			}
-			ennemiesHolder = new EnnemiesHolder();
-			//ennemiesHolder.mesh.position.y = -game.seaRadius;
-			scene.add(ennemiesHolder.mesh)
-		}
-		
-		function createParticles(){
-			for (var i=0; i<10; i++){
-			var particle = new Particle();
-			particlesPool.push(particle);
-			}
-			particlesHolder = new ParticlesHolder();
-			//ennemiesHolder.mesh.position.y = -game.seaRadius;
-			scene.add(particlesHolder.mesh)
-		}
-	}
 
 	function resetGame(){
 	game = {speed:0,
@@ -480,14 +246,11 @@
 		scene.add(spotLight);
 	}
 
-	var gui;
+	var gui, params;
 	function addGUI(){
 		gui = new dat.GUI();
-		var params = {
-			Sphere_amplitude: sphere_amp,
-			Cylindrical_amplitude: floor_amp,
-			StripeShaderModifier: StripeShaderupdatemodifier
-		}
+		gui.add(params, 'Geometry', ["Torus knot", "Sphere", "Icosahedron", "Cube", "Tetrahedron"]).onFinishChange(AddMainMeshes);
+
 		gui.add(params, 'Sphere_amplitude', 5, 40).onChange( function(val){
 			sphere_amp = val;
 		});
@@ -499,7 +262,7 @@
 		});
 		gui.open();
 	}
-
+	
 	var context, src, analyser, bufferLength, dataArray;
 	//Initializing Audio Management Variables
 	function initializeAudioVariables(){
@@ -766,18 +529,11 @@
 			scene.add(cube[i]);
 		};
 	}
+
 	//Adds Two DistortionBalls
 	var ball1, ball2;
 	function AddSpheres(){
 		var icosahedronGeometry = new THREE.IcosahedronGeometry(10, 3); //Adjustable Values//
-		var ballMaterial = new THREE.MeshLambertMaterial({
-			color: new THREE.Color("rgb(255, 0, 0)"),
-			//new THREE.Color("rgb(0, 0, 100)"),
-			//0xff00ee,
-			wireframe: true
-		});
-		//shamat_pencilshader
-		//ballMaterial
 		ball1 = new THREE.Mesh(icosahedronGeometry, shamat_pencilshader);
 		ball2 = new THREE.Mesh(icosahedronGeometry, shamat_pencilshader);
 		ball1.position.y = 105;
@@ -790,21 +546,27 @@
 		scene.add(group1);
 	}
 
-	//Adds the 5 Cubes
-	var cube1 = {}, cube2, cube3, cube4, cube5;
+	//Adds the 5 Optional Meshes
+	var cube1 = {}, cube2, cube3, cube4, cube5, meshGeometry;
 	function AddMainMeshes(){
-		//BoxGeometry(20,20,20,1,1,1);
-		//TorusKnotGeometry( 10, 3, 16, 4 );
-		var meshGeometry = new THREE.TorusKnotGeometry( 10, 3, 16, 4 );
-		var cubeMat = new THREE.MeshLambertMaterial({
-			color: 0xff00ee,
-			//new THREE.Color("rgb(0, 0, 100)"),
-			//0xff00ee,
-			wireframe: true
-		});
-		//cubeMat
-		//shamat_stripeshader
-		//shamat_pencilshader
+		scene.remove(cube1);
+		scene.remove(cube2);
+		scene.remove(cube3);
+		scene.remove(cube4);
+		scene.remove(cube5);
+
+		if(params.Geometry == "Torus knot"){
+			meshGeometry = new THREE.TorusKnotGeometry( 10, 3, 16, 4 );
+		} else if(params.Geometry == "Sphere"){
+			meshGeometry = new THREE.SphereGeometry(15);
+		} else if(params.Geometry == "Icosahedron"){
+			meshGeometry = new THREE.IcosahedronGeometry(15, 0);
+		} else if(params.Geometry == "Cube"){
+			meshGeometry = new THREE.BoxGeometry(20,20,20,1,1,1);
+		} else if(params.Geometry == "Tetrahedron"){
+			meshGeometry = new THREE.TetrahedronGeometry(20,0);
+		}
+
 		cube1 = new THREE.Mesh(meshGeometry, shamat_stripeshader);
 		cube2 = new THREE.Mesh(meshGeometry, shamat_stripeshader);
 		cube3 = new THREE.Mesh(meshGeometry, shamat_stripeshader);
@@ -827,6 +589,12 @@
 		scene.add(cube3);
 		scene.add(cube4);
 		scene.add(cube5);
+	}
+	params = {
+		"Geometry" : "Torus knot",
+		"Sphere_amplitude" : sphere_amp,
+		'Cylindrical_amplitude' : floor_amp,
+		'StripeShaderModifier' : StripeShaderupdatemodifier
 	}
 
 	var planeArr;
