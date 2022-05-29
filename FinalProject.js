@@ -1,6 +1,12 @@
 //Made By Andres Roco 14250791
 //31264 Introduction to Computer Graphics
 //Dynamic Audio Visualizer
+//Github: https://github.com/Komissarts/31264-Dynamic_Audio_Visualizer
+//Discord: Hobo Joe Snr#1780
+
+//To-Do
+//	- Post Processing Shaders
+//	- Dynamic Colour
 
 //Document Onload & File Switch
 {
